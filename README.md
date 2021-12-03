@@ -14,4 +14,5 @@ svn co -r 14365 https://forge.ipsl.jussieu.fr/nemo/svn/NEMO/trunk trunk_r4.2-RC
 
 ## Compile
 
-* On belenos : use the compilation script 
+* On belenos : use the compilation script in https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/tree/main/SCRIPTS/COMPILE
+* On other machines : use the compilation script, but update modules
