@@ -1,0 +1,262 @@
+#!/bin/sh
+#SBATCH -J AGRIF
+#SBATCH -N 30
+#SBATCH --exclusive
+#SBATCH --no-requeue
+#SBATCH --time=00:59:00
+#SBATCH --account=cmems
+######################################################
+#PARAMETERS
+CONFIGNM="eNEATL36"
+CONFIGNM_1="AGRIF"
+NAMCFG=/home/ext/mr/smer/brivoalt/NEMO4/trunk_r4.2-RC/cfgs/eNEATL36_AGRIF_vvl/EXP_AGRIF/namelist_cfg_EXP01_AGRIF
+NAMCFG_1=/home/ext/mr/smer/brivoalt/NEMO4/trunk_r4.2-RC/cfgs/eNEATL36_AGRIF_vvl/EXP_AGRIF/1_namelist_cfg_EXP01_AGRIF
+NAM_AGRIF=/scratch/work/brivoalt/MAKE_DOMAINcfg/MESHES_v0.2/AGRIF_FixedGrids.in
+RESTART_OCE=restart_oce.nc
+RESTART_OCE_1=restart_oce.nc
+DINI=2017-08-23 # Initial date YYYY-MM-DD
+DSTART=20170823 # Start date (of the run) YYYYMMDD
+SEG_LEN=8640 # In time step
+RATIO_TS_AGRIF=3
+SEG_LEN_1=$(($SEG_LEN * $RATIO_TS_AGRIF ))
+NITEND=$SEG_LEN
+NITEND_1=$SEG_LEN_1
+NLASTSEG=1
+NSEG=1
+DT_NEMO=150
+DT_NEMO_1=$(($DT_NEMO / $RATIO_TS_AGRIF ))
+NIT00=1 # Always one for this program
+NIT00_1=1 # Always one for this program
+######################################################
+# Comm/Fabric
+# -----------
+export DAPL_ACK_RETRY=7
+export DAPL_ACK_TIMER=20
+export DAPL_IB_SL=0
+export DAPL_UCM_CQ_SIZE=8192
+export DAPL_UCM_DREQ_RETRY=4
+export DAPL_UCM_QP_SIZE=8192
+export DAPL_UCM_REP_TIME=8000
+export DAPL_UCM_RTU_TIME=8000
+export DAPL_UCM_WAIT_TIME=10000
+export I_MPI_CHECK_DAPL_PROVIDER_COMPATIBILITY=0
+export I_MPI_CHECK_DAPL_PROVIDER_MISMATCH=none
+export I_MPI_DAPL_RDMA_MIXED=enable
+export I_MPI_DAPL_SCALABLE_PROGRESS=1
+export I_MPI_DAPL_TRANSLATION_CACHE=1
+export I_MPI_DAPL_UD_DIRECT_COPY_THRESHOLD=65536
+export I_MPI_DAPL_UD=on
+export I_MPI_FABRICS=shm:dapl
+export I_MPI_DAPL_PROVIDER=ofa-v2-mlx5_0-1u
+export I_MPI_FALLBACK=disable
+export I_MPI_FALLBACK_DEVICE=disable
+export I_MPI_DYNAMIC_CONNECTION=1
+export I_MPI_FAST_COLLECTIVES=1
+export I_MPI_LARGE_SCALE_THRESHOLD=8192
+# File system
+# -----------
+export I_MPI_EXTRA_FILESYSTEM_LIST=lustre
+export I_MPI_EXTRA_FILESYSTEM=on
+# Slurm
+# -----
+export I_MPI_HYDRA_BOOTSTRAP=slurm
+export I_MPI_SLURM_EXT=0
+# Force kill job
+# --------------
+export I_MPI_JOB_SIGNAL_PROPAGATION=on
+export I_MPI_JOB_ABORT_SIGNAL=9
+# Extra
+# -----
+export I_MPI_LIBRARY_KIND=release_mt
+export EC_MPI_ATEXIT=0
+export EC_PROFILE_HEAP=0
+# Process placement (cyclic)
+# --------------------------
+export I_MPI_JOB_RESPECT_PROCESS_PLACEMENT=off
+export I_MPI_PERHOST=1
+# Process pinning
+# ---------------
+export I_MPI_PIN=enable
+export I_MPI_PIN_PROCESSOR_LIST="allcores:map=scatter" # map=spread
+# -------------------------------------------------------
+# Indispensable
+# -------------------------------------------------------
+ulimit -Sl unlimited
+ulimit -St unlimited
+ulimit -Ss unlimited
+ulimit -S  unlimited
+
+ulimit -c 0
+ulimit -s unlimited
+export FORT_BUFFERED=true
+
+# -------------------------------------------------------
+# Chargement des differents modules
+# -------------------------------------------------------
+#. /home/ext/mr/smer/pianezzej/SAVE/env/env_frc_nemo.sh
+module purge
+module load gcc/9.2.0
+module load intel/2018.5.274
+module load intelmpi/2018.5.274
+
+module load phdf5/1.8.18
+module load netcdf_par/4.7.1_V2
+export NETCDF_CONFIG=$NETCDFF_BIN/nf-config
+
+export NEMOCONF_DIR=/home/ext/mr/smer/brivoalt/NEMO4/trunk_r4.2-RC/cfgs
+export XIOS_DIR=/home/ext/mr/smer/samsong/SRC/XIOS/trunk/BEL_INTEL18_r2134
+PATH="/home/ext/mr/smer/soniv/perl5/bin${PATH:+:${PATH}}"; export PATH;                                                                                                      
+PERL5LIB="/home/ext/mr/smer/soniv/perl5/lib/perl5${PERL5LIB:+:${PERL5LIB}}"; export PERL5LIB;
+
+# -------------------------------------------------------
+#  Lien vers les executables
+# -------------------------------------------------------
+
+#~~~~~~ NEMO
+ln -sf ${NEMOCONF_DIR}/eNEATL36_AGRIF_vvl/BLD/bin/nemo.exe .
+#~~~~~~ XIOS
+ln -sf ${XIOS_DIR}/bin/xios_server.exe .
+
+#ln -sf /scratch/work/brivoalt/MEDRYS2V1/RUN12/exe/xios_server.exe
+
+#~~~~~~ REBUILD
+export EXE_REBUILD=/home/ext/mr/smer/brivoalt/NEMO4/trunk_r14365/tools/MERGE_MPP/BLD/bin/mergefile_mpi.exe
+
+# -------------------------------------------------------
+# Creation du fichier config_file 
+# -------------------------------------------------------
+NBPROC_NEMO=3740               # proc number dedicated to nemo
+NBPROC_XIOS=100                 # proc number dedicated to xios
+PROCS=$(( ${NBPROC_NEMO} + ${NBPROC_XIOS} ))
+
+MULTIPROG_CONF=config_file
+BIN_NEMO=nemo.exe
+BIN_XIOS=xios_server.exe
+
+cat > ${MULTIPROG_CONF} <<EOF
+-n ${NBPROC_NEMO} ./${BIN_NEMO}
+-n ${NBPROC_XIOS} ./${BIN_XIOS}
+EOF
+
+# -------------------------------------------------------
+#  Lien vers les fichiers initiaux
+# -------------------------------------------------------
+echo ${NAMCFG} 
+#~~~~~~ namelist cfg
+RAMP_TF=true # true for 1st run, false for restarts
+sed -e "s/NIT00/`echo $NIT00`/" \
+        -e "s/NITEND/`echo $NITEND`/" \
+        -e "s/DSTART/`echo $DSTART`/" \
+        -e "s/RAMP_TF/`echo $RAMP_TF`/" \
+        -e "s/RSTIN/`echo ${RESTART_OCE%.nc}`/" ${NAMCFG} >  namelist_cfg
+
+sed -e "s/NIT00/`echo $NIT00_1`/" \
+        -e "s/NITEND/`echo $NITEND_1`/" \
+        -e "s/DSTART/`echo $DSTART`/" \
+        -e "s/RAMP_TF/`echo $RAMP_TF`/" \
+        -e "s/RSTIN/`echo ${RESTART_OCE_1%.nc}`/" ${NAMCFG_1} >  1_namelist_cfg
+
+
+#~~~~~~ namelist ref
+cp ${NEMOCONF_DIR}/SHARED/namelist_ref .
+cp ${NEMOCONF_DIR}/SHARED/namelist_ref 1_namelist_ref
+
+#~~~~~~ XIOS
+cp ${NEMOCONF_DIR}/SHARED/domain_def_nemo.xml .
+cp ${NEMOCONF_DIR}/SHARED/field_def_nemo-oce.xml .
+cp ${NEMOCONF_DIR}/SHARED/grid_def_nemo.xml .
+cp ${NEMOCONF_DIR}/eNEATL36_AGRIF_vvl/EXP_AGRIF/file_def_nemo-oce.xml.tmp file_def_nemo-oce.xml
+cp ${NEMOCONF_DIR}/eNEATL36_AGRIF_vvl/EXP_AGRIF/iodef.xml .
+cp ${NEMOCONF_DIR}/eNEATL36_AGRIF_vvl/EXP_AGRIF/context_nemo.xml .
+cp ${NEMOCONF_DIR}/eNEATL36_AGRIF_vvl/EXP_AGRIF/1_context_nemo.xml 1_context_nemo.xml
+cp ${NAM_AGRIF} AGRIF_FixedGrids.in
+#~~~~~~ FILES INPUTS
+#ln -fs /scratch/work/brivoalt/MAKE_DOMAINcfg/MESHES_v0.2/domain_cfg.nc .
+#ln -fs /scratch/work/brivoalt/MAKE_DOMAINcfg/MESHES_v0.2/1_domain_cfg.nc .
+ln -fs /scratch/work/brivoalt/MAKE_DOMAINcfg/eNEATL36_AGRIF_newdomain_GEBCO/domain_cfg.nc .
+ln -fs /scratch/work/brivoalt/MAKE_DOMAINcfg/eNEATL36_AGRIF_newdomain_GEBCO/1_domain_cfg.nc .
+
+ln -fs /scratch/work/brivoalt/DATA_eNEATL36/coordinates.bdy.nc .
+ln -fs /scratch/work/brivoalt/DATA_eNEATL36/shlat2d_eNEATL36.nc shlat2d.nc
+ln -fs /scratch/work/brivoalt/DATA_eNEATL36/CHL_eNEATL36_clim_interp_in_Tyrrh.nc CHL_eNEATL36.nc
+
+ln -fs /scratch/work/brivoalt/DATA_eNEATL36/new_tide_FES2014_grid_U_NEMO4_2.nc tide_FES2014_grid_U.nc
+ln -fs /scratch/work/brivoalt/DATA_eNEATL36/new_tide_FES2014_grid_V_NEMO4_2.nc tide_FES2014_grid_V.nc
+ln -fs /scratch/work/brivoalt/DATA_eNEATL36/tide_FES2014_grid_T_NEMO4_2.nc tide_FES2014_grid_T.nc
+
+# RESTART (2017/08/30)
+ln -fs /scratch/work/brivoalt/FORCING_eNEATL36/restart_from_PSY4QV3R1_20170823_drown.nc restart_oce.nc
+
+#~~~~~~ ATMO, BDY & RNF
+ln -fs /scratch/work/brivoalt/FORCING_eNEATL36/RUNOFF/rnf_forcing rnf_forcing
+ln -fs /scratch/work/brivoalt/FORCING_eNEATL36/ATMO/GAUSS1280 ecmwf_forcing
+ln -fs /scratch/work/brivoalt/FORCING_eNEATL36/BDY bdy_forcing
+ln -fs /scratch/work/brivoalt/DATA_eNEATL36/NEW_RNFS/runoff_eNEATL36_with_BDY_y2017_extrap_on_newdomaincfg.nc runoff_2D_MOTHER_y2017.nc
+ln -fs /scratch/work/brivoalt/DATA_eNEATL36/NEW_RNFS/1_runoff_eNEATL36_with_BDY_y2017_extrap_on_newdomaincfg.nc 1_runoff_2D_AGRIF_y2017.nc
+# -------------------------------------------------------
+# simulation
+# -------------------------------------------------------
+#========
+#--- Création des répoertoires d'écriture des sorties et des restarts
+#mkdir CDF
+mkdir CDF_RST
+
+mpiexec.hydra -configfile config_file
+
+
+# -------------------------------------------------------
+# restarting
+# -------------------------------------------------------
+if [ $(($NLASTSEG)) -gt 1 ]; then
+    
+    echo "NSEG > 1 ; restarting from restart"
+    restart=$(ls ${CONFIGNM}_*rest* | sort -V | tail -n 1)
+    restart_1=$(ls 1_${CONFIGNM_1}*rest* | sort -V | tail -n 1)
+    echo "the new restarts are : " $restart $restart_1
+    TMP=${restart%_restart_oce.nc}
+    TS_RST=${TMP#${CONFIGNM}_}
+    TS_RST_nbr=$(echo $TS_RST | sed 's/^0*//')
+    SEC_RST=$(( $TS_RST_nbr * $DT_NEMO ))
+    NIT00=$(( $TS_RST_nbr + 1 ))
+    NITEND=$(( $TS_RST_nbr + $SEG_LEN ))
+
+    echo "MOTHER : NIT00 = " $NIT00 ", NITEND = " $NITEND
+    TMP_1=${restart_1%_restart_oce.nc}
+    TS_RST_1=${TMP_1#1_${CONFIGNM_1}_}
+    echo $TS_RST_1
+    TS_RST_nbr_1=$(echo $TS_RST_1 | sed 's/^0*//')
+    SEC_RST_1=$(( $TS_RST_nbr_1 * $DT_NEMO_1 ))
+    NIT00_1=$(( $TS_RST_nbr_1 + 1 ))
+    NITEND_1=$(( $TS_RST_nbr_1 + $SEG_LEN_1 ))
+    echo "ZOOM : NIT00_1 = " $NIT00_1 ", NITEND_1 = " $NITEND_1
+    DSTART=$( date '+%Y%m%d' --date="$DINI 00:00:00 UTC + $SEC_RST seconds" )
+    echo "Next restart date =" $DSTART 
+    NSEG=$(( $NSEG + 1 ))
+    sed -e "s%NAMCFG_NM%`echo ${NAMCFG}`%" \
+        -e "s%NAMCFG_1_NM%`echo ${NAMCFG_1}`%" \
+        -e "s%NAM_AGRIF_NM%`echo ${NAM_AGRIF}`%" \
+        -e "s%RESTART_OCE_NM%`echo ${restart}`%" \
+        -e "s%RESTART_OCE_1_NM%`echo ${restart_1#1_}`%" \
+            -e "s%DINI_NM%`echo ${DINI}`%" \
+            -e "s%DSTART_NM%`echo ${DSTART}`%" \
+            -e "s%SEG_LEN_NM%`echo ${SEG_LEN}`%" \
+            -e "s%SEG_LEN_1_NM%`echo ${SEG_LEN_1}`%" \
+            -e "s%NITEND_NM%`echo ${NITEND}`%" \
+            -e "s%NITEND_1_NM%`echo ${NITEND_1}`%" \
+            -e "s%NLASTSEG_NM%`echo ${NLASTSEG}`%" \
+            -e "s%NSEG_NM%`echo ${NSEG}`%" \
+            -e "s%DT_NEMO_NM%`echo ${DT_NEMO}`%" \
+            -e "s%DT_NEMO_1_NM%`echo ${DT_NEMO_1}`%" \
+            -e "s%NIT00_NM%`echo ${NIT00}`%" \
+            -e "s%NIT00_1_NM%`echo ${NIT00_1}`%" \
+            -e "s%CONFIGNM_NM%`echo ${CONFIGNM}`%" \
+            -e "s%CONFIGNM_1_NM%`echo ${CONFIGNM_1}`%" \
+            -e "s%RATIO_TS_AGRIF_NM%`echo ${RATIO_TS_AGRIF}`%" \
+            -e "s%NIT00_1_NM%`echo ${NIT00_1}`%" NEMO_4_2_AGRIF_RUN.sub.model >  NEMO_4_2_AGRIF_RUN.sub.$NSEG
+    chmod +x NEMO_4_2_AGRIF_RUN.sub.$NSEG 
+    sbatch NEMO_4_2_AGRIF_RUN.sub.$NSEG
+    #./NEMO_4_2_AGRIF_RUN.sub.$NSEG
+    
+fi
+
+
