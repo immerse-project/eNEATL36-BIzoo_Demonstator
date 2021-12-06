@@ -27,8 +27,8 @@ _Figure : Snapshot of the surface current vorticity other the 1/36° eNEATL36 ar
 
 ## How to compile
 
-* How to compile
-
+* How to compile  
+  
   1 : create the configuration : `./makenemo -m your_archfile -r eNEATL36_AGRIF -n AMM12 -j 20`   
   2 : Change cpp keys to : key_xios key_agrif key_vvl and add "NST" to your configuration in work_cfg.txt file   
   3 : recompile : `./makenemo -m your_archfile -r eNEATL36_AGRIF -j 20`   
@@ -46,7 +46,7 @@ _Figure : Snapshot of the surface current vorticity other the 1/36° eNEATL36 ar
 
 ## Run a eNEATL46-AGRIF simulation : 
 
-* Use the run scripts here : https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/tree/main/SCRIPTS/RUN : 
+* Use the run scripts here : https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/tree/main/SCRIPTS/RUN :   
 1 : Copy the 3 scripts (NEMO_4_2_AGRIF_RUN_INI.sub, NEMO_4_2_AGRIF_RUN_RESTART.sub and NEMO_4_2_AGRIF_RUN.sub.model) in the run directory   
 2 : Change paths (and modules eventually) in `NEMO_4_2_AGRIF_RUN_INI.sub`   
 3 : submit INI job `sbatch NEMO_4_2_AGRIF_RUN_INI.sub`  
