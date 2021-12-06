@@ -47,10 +47,10 @@ _Figure : Snapshot of the surface current vorticity other the 1/36° eNEATL36 ar
 ## Run a eNEATL46-AGRIF simulation : 
 
 * Use the run scripts here : https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/tree/main/SCRIPTS/RUN : 
-1 : Copy the 3 scripts (NEMO_4_2_AGRIF_RUN_INI.sub, NEMO_4_2_AGRIF_RUN_RESTART.sub and NEMO_4_2_AGRIF_RUN.sub.model) in the run directory \n
-2 : Change paths (and modules eventually) in `NEMO_4_2_AGRIF_RUN_INI.sub`  \n
-3 : submit INI job `sbatch NEMO_4_2_AGRIF_RUN_INI.sub` \n
-\n
+1 : Copy the 3 scripts (NEMO_4_2_AGRIF_RUN_INI.sub, NEMO_4_2_AGRIF_RUN_RESTART.sub and NEMO_4_2_AGRIF_RUN.sub.model) in the run directory   
+2 : Change paths (and modules eventually) in `NEMO_4_2_AGRIF_RUN_INI.sub`   
+3 : submit INI job `sbatch NEMO_4_2_AGRIF_RUN_INI.sub`  
+
 * The namelists for the simulation are available here : https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/tree/main/NAMELISTS/RUN 
 
 
