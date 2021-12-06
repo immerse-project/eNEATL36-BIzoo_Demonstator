@@ -1,7 +1,7 @@
 # eNEATL36-AGRIF_Demonstator
 eNEATL36-AGRIF Demonstator for IMMERSE Project
 
-!(https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/blob/main/FIGURES/figure_AGRIF.png)
+![Figure 1](https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/blob/main/FIGURES/figure_AGRIF.png)
 
 ## Intallation
 
