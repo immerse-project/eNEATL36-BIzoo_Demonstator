@@ -2,6 +2,11 @@
 
 This page describe the way to build a global 1/36° regional configuration other the North-East Atlantic (eNEATL36) with an embedded 1/108° AGRIF zoom.
 
+## Description
+
+* Number of grid points : 9 321 751 (1294 * 1894 = 2 450 836 points for eNEATL36 plus 2559 * 2685 = 6 870 915 points for the AGRIF zoom)
+* Target period : Jan 2017 - June 2018
+
 ## Status
 
 The eNEATL36-AGRIF configuration is currently has been tested in NEMO4.2 over a smaller zoom in the bay of biscay. The system is currently transferred on the target zoom area (contoured in red in Figure 1.)
@@ -34,14 +39,18 @@ _Figure : Snapshot of the surface current vorticity other the 1/36° eNEATL36 ar
 
 * Note that you also have compile the domain_cfg creation tool in order to perform a simulation. To do so, use `./maketools -n DOMAINcfg -m your_archfile` in the tools directory, with the cpp keys : key_mpp_mpi key_agrif.
 
-## How to run
+## Create the input mesh files : 
 
-* Create the mesh files : launch domaincfg tool with
+* Launch domaincfg tool with the namelists in https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/tree/main/NAMLST/DOMAINCFG
+* An example of domain_cfg slurm script is available here : https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/blob/main/SCRIPTS/DOMAINcfg/run_domain_cfg_eNEATL36_AGRIF_newdomain_GEBCO.sub
+
+## Run a eNEATL46-AGRIF simulation : 
 
 * Use the run scripts here : https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/tree/main/SCRIPTS/RUN : 
 1 : Copy the 3 scripts (NEMO_4_2_AGRIF_RUN_INI.sub, NEMO_4_2_AGRIF_RUN_RESTART.sub and NEMO_4_2_AGRIF_RUN.sub.model) in the run directory
 2 : Change paths (and modules eventually) in `NEMO_4_2_AGRIF_RUN_INI.sub`  
 3 : submit INI job `sbatch NEMO_4_2_AGRIF_RUN_INI.sub`
 
+* The namelists for the simulation are available here : https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/tree/main/NAMLST/RUN
 
 
