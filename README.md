@@ -41,7 +41,7 @@ _Figure : Snapshot of the surface current vorticity other the 1/36° eNEATL36 ar
 
 ## Create the input mesh files : 
 
-* Launch domaincfg tool with the namelists in https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/tree/main/NAMLST/DOMAINCFG
+* Launch domaincfg tool with the namelists in https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/tree/main/NAMELISTS/DOMAINCFG
 * An example of domain_cfg slurm script is available here : https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/blob/main/SCRIPTS/DOMAINcfg/run_domain_cfg_eNEATL36_AGRIF_newdomain_GEBCO.sub
 
 ## Run a eNEATL46-AGRIF simulation : 
@@ -51,6 +51,6 @@ _Figure : Snapshot of the surface current vorticity other the 1/36° eNEATL36 ar
 2 : Change paths (and modules eventually) in `NEMO_4_2_AGRIF_RUN_INI.sub`  
 3 : submit INI job `sbatch NEMO_4_2_AGRIF_RUN_INI.sub`
 
-* The namelists for the simulation are available here : https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/tree/main/NAMLST/RUN
+* The namelists for the simulation are available here : https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/tree/main/NAMELISTS/RUN
 
 
