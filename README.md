@@ -27,8 +27,7 @@ _Figure : Snapshot of the surface current vorticity other the 1/36° eNEATL36 ar
 
 ## How to compile
 
-* How to compile  
-  
+ 
   1 : create the configuration : `./makenemo -m your_archfile -r eNEATL36_AGRIF -n AMM12 -j 20`   
   2 : Change cpp keys to : key_xios key_agrif key_vvl and add "NST" to your configuration in work_cfg.txt file   
   3 : recompile : `./makenemo -m your_archfile -r eNEATL36_AGRIF -j 20`   
