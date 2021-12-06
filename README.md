@@ -3,13 +3,13 @@ eNEATL36-AGRIF Demonstator for IMMERSE Project
 
 ![Figure 1](https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/blob/main/FIGURES/figure_AGRIF.png)
 <p align="center"> 
-_Figure : Surface current vorticity other the eNEATL36 area and other the zoom area. The area contoured in dark is used to configure / test the model with AGRIF, whereas the target AGRIF zoom area is contoured in red._
+Figure : Surface current vorticity other the eNEATL36 area and other the zoom area. The area contoured in dark is used to configure / test the model with AGRIF, whereas the target AGRIF zoom area is contoured in red.
 </p>
 ## Intallation
 
 * Download XIOS:
 
-svn co -r 2130 http://forge.ipsl.jussieu.fr/ioserver/svn/XIOS/trunk XIOS
+_svn co -r 2130 http://forge.ipsl.jussieu.fr/ioserver/svn/XIOS/trunk XIOS_
 
 * Download NEMO trunk
 
