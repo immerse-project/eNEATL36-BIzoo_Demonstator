@@ -2,7 +2,7 @@
 eNEATL36-AGRIF Demonstator for IMMERSE Project
 
 ![Figure 1](https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/blob/main/FIGURES/figure_AGRIF.png)
-
+<p style="text-align: center;">Figure : Surface current vorticity other the eNEATL36 area and other the zoom area. The area in dark represent the "work" zoom area</p>
 ## Intallation
 
 * Download XIOS:
