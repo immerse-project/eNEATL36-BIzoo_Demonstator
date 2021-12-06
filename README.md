@@ -5,6 +5,8 @@ This page describe the way to build a global 1/36° regional configuration other
 ## Description
 
 * Number of grid points : 9 321 751 (1294 * 1894 = 2 450 836 points for eNEATL36 plus 2559 * 2685 = 6 870 915 points for the AGRIF zoom)
+* eNEATL36 : `lon_min = -19,91° ; lon_max = 22,67° ; lat_min = 26,10° ; lat_max = 64,15°`
+* Zoom : `lon_min = -11,86° ; lon_max = 11,29° ; lat_min = 33,66° ; lat_max = 56,70°`
 * Target period : Jan 2017 - June 2018
 
 ## Status
