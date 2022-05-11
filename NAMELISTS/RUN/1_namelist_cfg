@@ -21,9 +21,9 @@
 !-----------------------------------------------------------------------
    nn_no       =       0   !  Assimilation cycle index
    cn_exp      = "AGRIF" !  experience name
-   nn_it000    =    1   !  first time step
-   nn_itend    =    25920   !  last  time step
-   nn_date0    =    20170823  !  date at nit_0000 (format yyyymmdd) used if ln_rstart=F or (ln_rstart=T and nn_rstctl=0 or 1)
+   nn_it000    =    NIT00   !  first time step
+   nn_itend    =    NITEND   !  last  time step
+   nn_date0    =    DSTART  !  date at nit_0000 (format yyyymmdd) used if ln_rstart=F or (ln_rstart=T and nn_rstctl=0 or 1)
    nn_time0    =       0   !  initial time of day in hhmm
    nn_leapy    =       1   !  Leap year calendar (1) or not (0)
    ln_rstart   = .FALSE.    !  start from rest (F) or from a restart file (T)
@@ -32,7 +32,7 @@
       !                          !    = 0 nn_date0 read in namelist ; nn_it000 : read in namelist
       !                          !    = 1 nn_date0 read in namelist ; nn_it000 : check consistancy between namelist and restart
       !                          !    = 2 nn_date0 read in restart  ; nn_it000 : check consistancy between namelist and restart
-      cn_ocerst_in    = "restart_oce" !  suffix of ocean restart name (input)
+      cn_ocerst_in    = "RSTIN" !  suffix of ocean restart name (input)
       cn_ocerst_indir = "."         !  directory from which to read input ocean restarts
       cn_ocerst_out   = "restart_oce" !  suffix of ocean restart name (output)
       cn_ocerst_outdir = "."        !  directory in which to write output ocean restarts
@@ -92,7 +92,7 @@
 &namtsd        !    Temperature & Salinity Data  (init/dmp)             (default: OFF)
 !-----------------------------------------------------------------------
    !                       ! =T  read T-S fields for:
-   ln_tsd_init = .false.         !  ocean initialisation
+   ln_tsd_init = .true.         !  ocean initialisation
    ln_tsd_dmp  = .false.         !  T-S restoring   (see namtra_dmp)
 
    cn_dir      = './'      !  root directory for the T-S data location
@@ -174,7 +174,7 @@
                            !     =3 annual global mean of year before reported
                            !     =4 annual global mean of e-p-r at sinusoidal function
    ln_rnf      = .true.    !  runoffs                                   (T => fill namsbc_rnf)
-   ln_apr_dyn  = .false.    !  Patm gradient added in ocean & ice Eqs.   (T => fill namsbc_apr )
+   ln_apr_dyn  = .true.    !  Patm gradient added in ocean & ice Eqs.   (T => fill namsbc_apr )
    ln_wave     = .false.   !  Activate coupling with wave  (T => fill namsbc_wave)
    nn_lsm      = 0         !  =0 land/sea mask for input fields is not applied (keep empty land/sea mask filename field) ,
                            !  =1:n number of iterations of land/sea mask application for input fields (fill land/sea mask filename field)
@@ -194,14 +194,14 @@
    ln_ANDREAS   = .false.    ! "ANDREAS"   algorithm   (Andreas et al. 2015)
       rn_zqt       =  2.     !  Air temperature & humidity reference height (m)
       rn_zu        = 10.     !  Wind vector reference height (m)
-      nn_iter_algo =  5      !  Number of iterations in bulk param. algo ("stable ABL + weak wind" requires more)
-      ln_skin_cs   = .false. !  use the cool-skin parameterization  => use at least nn_iter_algo > 10
+      nn_iter_algo = 12       !  Number of iterations in bulk param. algo ("stable ABL + weak wind" requires more)
+      ln_skin_cs   = .true. !  use the cool-skin parameterization  => use at least nn_iter_algo > 10
       ln_skin_wl   = .false. !  use the warm-layer parameterization => use at least nn_iter_algo > 10
    !
    rn_pfac    = 1.          !  multipl. factor for precipitation (total & snow)
    rn_efac    = 1.          !  multipl. factor for evaporation (0. or 1.)
    !
-   ln_crt_fbk = .false.      !  Add surface current feedback to the wind stress (Renault et al. 2020, doi: 10.1029/2019MS001715)
+   ln_crt_fbk = .true.      !  Add surface current feedback to the wind stress (Renault et al. 2020, doi: 10.1029/2019MS001715)
          rn_stau_a = -2.9e-3   !     Alpha from eq. 10: Stau = Alpha * Wnd + Beta
          rn_stau_b =  8.0e-3   !     Beta 
    !
@@ -223,15 +223,15 @@
    !___________!_________________________!___________________!___________!_____________!________!___________!______________________________________!__________!_______________!
    !           !  file name              ! frequency (hours) ! variable  ! time interp.!  clim  ! 'yearly'/ !       weights filename               ! rotation ! land/sea mask !
    !           !                         !  (if <0  months)  !   name    !   (logical) !  (T/F) ! 'monthly' !                                      ! pairing  !    filename   !
-   sn_wndi     = 'ECMWF_BULKU10M_GAUSS1280'    ,      1.     , 'sowinu10', .true.   , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_bicub' , ''   , ''
-   sn_wndj     = 'ECMWF_BULKV10M_GAUSS1280'    ,      1.     , 'sowinv10', .true.   , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_bicub' , ''   , ''
-   sn_qsr      = 'ECMWF_FLUXSSRD_GAUSS1280'    ,      1.     , 'sosudosw', .true.  , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_bilin' ,  ''  , ''
-   sn_qlw      = 'ECMWF_FLUXSTRD_GAUSS1280'    ,      1.     , 'sosudolw', .true.  , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_bilin' ,  ''  , ''
-   sn_tair     = 'ECMWF_BULKTAIR_GAUSS1280'    ,      1.     , 'sotemair', .true.   , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_bilin' ,  ''  , ''
-   sn_humi     = 'ECMWF_BULKHUMI_GAUSS1280'    ,      1.     , 'sohumspe', .true.   , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_bilin' ,  ''  , ''
-   sn_prec     = 'ECMWF_FLCOPRE_GAUSS1280'     ,      1      , 'sowaprec', .true.  , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_bilin' ,  ''  , ''
-   sn_snow     = 'ECMWF_SNOWFALL_GAUSS1280'    ,      1.     , 'sosnowfa', .FALSE.  , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_bilin' , '', ''
-   sn_slp      = 'ECMWF_PRES_GAUSS1280'        ,      1.     , 'somslpre', .true.   , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_bilin' ,  ''  , ''
+   sn_wndi     = 'ECMWF_BULKU10M_GAUSS1280'    ,      1.     , 'sowinu10', .true.   , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_LARGE_bicub' , ''   , ''
+   sn_wndj     = 'ECMWF_BULKV10M_GAUSS1280'    ,      1.     , 'sowinv10', .true.   , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_LARGE_bicub' , ''   , ''
+   sn_qsr      = 'ECMWF_FLUXSSRD_GAUSS1280'    ,      1.     , 'sosudosw', .true.  , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_LARGE_bilin' ,  ''  , ''
+   sn_qlw      = 'ECMWF_FLUXSTRD_GAUSS1280'    ,      1.     , 'sosudolw', .true.  , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_LARGE_bilin' ,  ''  , ''
+   sn_tair     = 'ECMWF_BULKTAIR_GAUSS1280'    ,      1.     , 'sotemair', .true.   , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_LARGE_bilin' ,  ''  , ''
+   sn_humi     = 'ECMWF_BULKHUMI_GAUSS1280'    ,      1.     , 'sohumspe', .true.   , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_LARGE_bilin' ,  ''  , ''
+   sn_prec     = 'ECMWF_FLCOPRE_GAUSS1280'     ,      1      , 'sowaprec', .true.  , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_LARGE_bilin' ,  ''  , ''
+   sn_snow     = 'ECMWF_SNOWFALL_GAUSS1280'    ,      1.     , 'sosnowfa', .FALSE.  , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_LARGE_bilin' , '', ''
+   sn_slp      = 'ECMWF_PRES_GAUSS1280'        ,      1.     , 'somslpre', .true.   , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_LARGE_bilin' ,  ''  , ''
    sn_cc       = 'NOT USED'              , 24.               , 'CC'      ,   .false.   , .true. , 'yearly'  , 'weights_core_orca2_bilinear_noc.nc' , ''       , ''
    sn_hpgi     = 'NOT USED'              , 24.               , 'uhpg'    ,   .false.   , .false., 'monthly' , ''                                   , 'UG'     , ''
    sn_hpgj     = 'NOT USED'              , 24.               , 'vhpg'    ,   .false.   , .false., 'monthly' , ''                                   , 'VG'     , ''
@@ -295,8 +295,8 @@
    !___________!_________________________!___________________!___________!_____________!________!___________!__________________!__________!_______________!
    !           !  file name              ! frequency (hours) ! variable  ! time interp.!  clim  ! 'yearly'/ ! weights filename ! rotation ! land/sea mask !
    !           !                         !  (if <0  months)  !   name    !   (logical) !  (T/F) ! 'monthly' !                  ! pairing  !    filename   !
-   sn_rnf      = 'runoff_2D_AGRIF'    ,          -1       , 'orca_costal', .true.   , .false. , 'yearly'  , ''       , ''       , ''
-   sn_cnf      = 'runoff_2D_AGRIF'    ,          -1       , 'socoefr0',    .FALSE.  , .false. , 'yearly'  , ''               , ''       , ''
+   sn_rnf      = 'runoff_2D_AGRIF'    ,          24       , 'runoffs_instant', .true.   , .false. , 'yearly'  , ''       , ''       , ''
+   sn_cnf      = 'runoff_2D_AGRIF'    ,          24       , 'socoefr0',    .FALSE.  , .false. , 'yearly'  , ''               , ''       , ''
    sn_s_rnf    = 'runoffs'               ,        24.        , 'rosaline',    .true.   , .true. , 'yearly'  , ''               , ''       , ''
    sn_t_rnf    = 'runoffs'               ,        24.        , 'rotemper',    .true.   , .true. , 'yearly'  , ''               , ''       , ''
    sn_dep_rnf  = 'runoffs'               ,         0.        , 'rodepth' ,    .FALSE.  , .true. , 'yearly'  , ''               , ''       , ''
@@ -312,7 +312,7 @@
    !___________!_________________________!___________________!___________!_____________!________!___________!__________________!__________!_______________!
    !           !  file name              ! frequency (hours) ! variable  ! time interp.!  clim  ! 'yearly'/ ! weights filename ! rotation ! land/sea mask !
    !           !                         !  (if <0  months)  !   name    !   (logical) !  (T/F) ! 'monthly' !                  ! pairing  !    filename   !
-   sn_apr      = 'ECMWF_PRES_GAUSS1280'            ,      1.    , 'somslpre', .true.   , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_bilin' ,  ''  , ''
+   sn_apr      = 'ECMWF_PRES_GAUSS1280'            ,      1.    , 'somslpre', .true.   , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_LARGE_bilin' ,  ''  , ''
 /
 !-----------------------------------------------------------------------
 &namisf       !  Top boundary layer (ISF)                               (default: OFF)
@@ -342,20 +342,20 @@
 &namlbc        !   lateral momentum boundary condition                  (default: NO selection)
 !-----------------------------------------------------------------------
    !                       !  free slip  !   partial slip  !   no slip   ! strong slip
-   rn_shlat    =    0.5    !  shlat = 0  !  0 < shlat < 2  !  shlat = 2  !  2 < shlat
+   rn_shlat    =    2    !  shlat = 0  !  0 < shlat < 2  !  shlat = 2  !  2 < shlat
    ln_vorlat   = .false.   !  consistency of vorticity boundary condition with analytical Eqs.
 /
 !-----------------------------------------------------------------------
 &namagrif      !  AGRIF zoom                                            ("key_agrif")
 !-----------------------------------------------------------------------
    ln_agrif_2way   = .true.  !  activate two way nesting
-   ln_init_chfrpar = .true. !  initialize child grids from parent
+   ln_init_chfrpar = .false. !  initialize child grids from parent
    ln_vert_remap   = .false. !  use vertical remapping
    ln_chk_bathy    = .true.  !  =T  check the parent bathymetry
    rn_sponge_tra   = 0.002   !  coefficient for tracer   sponge layer []
    rn_sponge_dyn   = 0.002   !  coefficient for dynamics sponge layer []
-   rn_trelax_tra   = 0.    !  inverse of relaxation time (in steps) for tracers []
-   rn_trelax_dyn   = 0.001    !  inverse of relaxation time (in steps) for dynamics []
+   rn_trelax_tra   = 0.01    !  inverse of relaxation time (in steps) for tracers []
+   rn_trelax_dyn   = 0.01    !  inverse of relaxation time (in steps) for dynamics []
 
 /
 !-----------------------------------------------------------------------
@@ -368,7 +368,7 @@
          ln_read_load  = .FALSE.               ! Or read load potential from file
             cn_tide_load = 'tide_LOAD_grid_T'  ! filename for load potential
             !
-      ln_tide_ramp  = .true.               !  Use linear ramp for tides at startup
+      ln_tide_ramp  = .RAMP_TF.               !  Use linear ramp for tides at startup
          rn_tide_ramp_dt   =    2                 !  ramp duration in days
    sn_tide_cnames(1)     =   'M2'   !  name of constituent
    sn_tide_cnames(2)     =   'S2'
@@ -402,8 +402,8 @@
 !-----------------------------------------------------------------------
    ln_drg_OFF  = .false.   !  free-slip       : Cd = 0                  (F => fill namdrg_bot
    ln_lin      = .false.   !      linear  drag: Cd = Cd0 Uc0                   &   namdrg_top)
-   ln_non_lin  = .true.   !  non-linear  drag: Cd = Cd0 |U|
-   ln_loglayer = .false.    !  logarithmic drag: Cd = vkarmn/log(z/z0) |U|
+   ln_non_lin  = .false.   !  non-linear  drag: Cd = Cd0 |U|
+   ln_loglayer = .true.    !  logarithmic drag: Cd = vkarmn/log(z/z0) |U|
    !
    ln_drgimp   = .true.    !  implicit top/bottom friction flag
       ln_drgice_imp = .false.! implicit ice-ocean drag
@@ -415,13 +415,13 @@
 !-----------------------------------------------------------------------
 &namdrg_bot    !   BOTTOM friction                                      (ln_drg_OFF =F)
 !-----------------------------------------------------------------------
-   rn_Cd0      =  5e-3   !  drag coefficient [-]
+   rn_Cd0      =  2.5e-3   !  drag coefficient [-]
    rn_Uc0      =  0.4      !  ref. velocity [m/s] (linear drag=Cd0*Uc0)
-   rn_Cdmax    =  0.2      !  drag value maximum [-] (logarithmic drag)
-   rn_ke0      =  5e-3   !  background kinetic energy  [m2/s2] (non-linear cases)
-   rn_z0       =  0.01   !  roughness [m] (ln_loglayer=T)
-   ln_boost    = .false.   !  =T regional boost of Cd0 ; =F constant
-      rn_boost =  50.         !  local boost factor  [-]
+   rn_Cdmax    =  0.1      !  drag value maximum [-] (logarithmic drag)
+   rn_ke0      =  2.5e-3   !  background kinetic energy  [m2/s2] (non-linear cases)
+   rn_z0       =  0.0035   !  roughness [m] (ln_loglayer=T)
+   ln_boost    = .true.   !  =T regional boost of Cd0 ; =F constant
+      rn_boost =  2.         !  local boost factor  [-]
 /
 !-----------------------------------------------------------------------
 &nambbc        !   bottom temperature boundary condition                (default: OFF)
@@ -483,8 +483,8 @@
       nn_cen_h   =  4            !  =2/4, horizontal 2nd order CEN / 4th order CEN
       nn_cen_v   =  4            !  =2/4, vertical   2nd order CEN / 4th order COMPACT
    ln_traadv_fct = .true.  !  FCT scheme
-      nn_fct_h   =  2            !  =2/4, horizontal 2nd / 4th order
-      nn_fct_v   =  2            !  =2/4, vertical   2nd / COMPACT 4th order
+      nn_fct_h   =  4            !  =2/4, horizontal 2nd / 4th order
+      nn_fct_v   =  4            !  =2/4, vertical   2nd / COMPACT 4th order
    ln_traadv_mus = .false. !  MUSCL scheme
       ln_mus_ups = .false.       !  use upstream scheme near river mouths
    ln_traadv_ubs = .false. !  UBS scheme

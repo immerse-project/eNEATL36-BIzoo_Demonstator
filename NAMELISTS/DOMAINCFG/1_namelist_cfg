@@ -14,15 +14,17 @@
 &namdom        !   space and time domain (bathymetry, mesh, timestep)
 !-----------------------------------------------------------------------
    ln_read_cfg = .false.
-   nn_bathy = 1 
-                           !  or compute (2) from external bathymetry
+   nn_bathy    =    1      ! = 0 compute analyticaly
+                           ! = 1 read the bathymetry file
+                           ! = 2 compute from external bathymetry
+                           ! = 3 compute from parent (if "key_agrif")
    nn_interp = 1
    cn_domcfg   =  'domain_cfg_init.nc'                
-   cn_topo = 'GEBCO_2020.nc'
-   cn_bath = 'elevation'
-   cn_lon = 'lon'
-   cn_lat = 'lat'
-   rn_scale = -1
+   cn_topo = 'domain_cfg_update.nc'
+   cn_bath = 'Bathymetry'
+   cn_lon = 'glamt'
+   cn_lat = 'gphit'
+   rn_scale = 1
    rn_bathy    =    0.     !  value of the bathymetry. if (=0) bottom flat at jpkm1
    rn_hmin     =   -8.                !  min depth of the ocean (>0) or min number of ocean level (<0)
    rn_e3zps_min=   25.                 !  partial step thickness is set larger than the minimum of
@@ -55,13 +57,13 @@
    !                       ! =F : e3 analytical derivative of depth function
    !                       !      only there for backward compatibility test with v3.6
    !                       !
-   cp_cfg = 'Biscaye'
-   jp_cfg      =      108              !  resolution of the configuration
-   jpidta = 1328
-   jpjdta = 1283
+   cp_cfg = 'dumb'
+   jp_cfg      =      36               !  resolution of the configuration
+   jpidta = 2567
+   jpjdta = 2693
    jpkdta      =      50               !  number of levels      ( >= jpk )
-   Ni0glo = 1328
-   Nj0glo = 1283
+   Ni0glo = 2567
+   Nj0glo = 2693
    jpkglo      =      50
    jperio = 0
    ln_use_jattr = .false.  !  use (T) the file attribute: open_ocean_jstart, if present
@@ -98,6 +100,8 @@
 !-----------------------------------------------------------------------
 &namagrif      !  AGRIF zoom                                            ("key_agrif")
 !-----------------------------------------------------------------------
+   npt_connect   = 4
+   npt_copy      = 4
 /
 !-----------------------------------------------------------------------
 &namnc4        !   netcdf4 chunking and compression settings            ("key_netcdf4")

@@ -7,8 +7,7 @@
 #SBATCH -p normal256
 #SBATCH -o compile_NEMO_4.out
 
-CONFIG="eNEATL36_AGRIF"       # ORCA025, NEATL36, ...
-#CONFIG="AGRIF_DEMO_2"
+CONFIG="AMM12 -n eNEATL36_AGRIF"       # ORCA025, NEATL36, ...
 if [ ${CONFIG} == "empty" ] ; then
    echo "fill CONFIG name !!!!!!"
    exit
