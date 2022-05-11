@@ -1,0 +1,129 @@
+#!/bin/sh
+#SBATCH -J DOMAINcfg
+#SBATCH -N 1
+#SBATCH -p normal256
+#SBATCH  --exclusive
+#SBATCH  --no-requeue
+#SBATCH  --time=00:30:00
+#SBATCH -A cmems
+
+WORK_DIR=/scratch/work/brivoalt/MAKE_DOMAINcfg/eNEATL36_AGRIF_emodNET2018_finaldomain_corrected_with_FES2014
+INP_DIR=/scratch/work/brivoalt/MAKE_DOMAINcfg/INPUT
+DOMAINcfg_DIR=/home/ext/mr/smer/brivoalt/NEMO4/dev_agrif_immerse/tools/DOMAINcfg
+DOMCFG_INIT=/scratch/work/brivoalt/MAKE_DOMAINcfg/eNEATL36_newbathy_update/domain_cfg.nc
+#DOMCFG_INIT_update=/scratch/work/brivoalt/MAKE_DOMAINcfg/INPUT/1_domain_cfg_bathy_emodnet_update_NEMOcompatible.nc
+DOMCFG_INIT_update=/scratch/work/brivoalt/MAKE_DOMAINcfg/INPUT/1_domain_cfg_bathy_masked_plus_M2S2FES2014_hmin5.nc
+NAMELIST=namelist_cfg_eNEATL36_AGRIF_emodNET2018_finaldomain_update
+NAMELIST_1=1_namelist_cfg_eNEATL36_AGRIF_emodNET2018_finaldomain_update
+AGRIF_FILE=AGRIF_FixedGrids.in.finaldomain
+BATHY_FILE=/scratch/work/beuvierj/DATA_eNEATL36/bathymeter_eNEATL36_vKaren.nc
+COORD_FILE=/scratch/work/brivoalt/DATA_eNEATL36/coordinates_eNEATL36.nc
+emodNETFILE=/scratch/work/brivoalt/DATA_eNEATL36/bathy_emodnet_on_EMODNET_2018.nc
+############## Module management ################
+# modify Ulimit
+# #############
+ulimit -Sl unlimited
+ulimit -St unlimited
+ulimit -Ss unlimited
+ulimit -S  unlimited
+export DAPL_ACK_TIMER=20
+export DAPL_IB_SL=0
+export DAPL_UCM_CQ_SIZE=8192
+export DAPL_UCM_DREQ_RETRY=4
+export DAPL_UCM_QP_SIZE=8192
+export DAPL_UCM_REP_TIME=8000
+export DAPL_UCM_RTU_TIME=8000
+export DAPL_UCM_WAIT_TIME=10000
+export I_MPI_CHECK_DAPL_PROVIDER_COMPATIBILITY=0
+export I_MPI_CHECK_DAPL_PROVIDER_MISMATCH=none
+export I_MPI_DAPL_RDMA_MIXED=enable
+export I_MPI_DAPL_SCALABLE_PROGRESS=1
+export I_MPI_DAPL_TRANSLATION_CACHE=1
+export I_MPI_DAPL_UD_DIRECT_COPY_THRESHOLD=65536
+export I_MPI_DAPL_UD=on
+export I_MPI_FABRICS=shm:dapl
+export I_MPI_DAPL_PROVIDER=ofa-v2-mlx5_0-1u
+export I_MPI_FALLBACK=disable
+export I_MPI_FALLBACK_DEVICE=disable
+export I_MPI_DYNAMIC_CONNECTION=1
+export I_MPI_FAST_COLLECTIVES=1
+export I_MPI_LARGE_SCALE_THRESHOLD=8192
+# File system
+# -----------
+export I_MPI_EXTRA_FILESYSTEM_LIST=lustre
+export I_MPI_EXTRA_FILESYSTEM=on
+# Slurm
+# -----
+export I_MPI_HYDRA_BOOTSTRAP=slurm
+export I_MPI_SLURM_EXT=0
+# Force kill job
+# --------------
+export I_MPI_JOB_SIGNAL_PROPAGATION=on
+export I_MPI_JOB_ABORT_SIGNAL=9
+# Extra
+# -----
+export I_MPI_LIBRARY_KIND=release_mt
+export EC_MPI_ATEXIT=0
+export EC_PROFILE_HEAP=0
+# Process placement (cyclic)
+# --------------------------
+export I_MPI_JOB_RESPECT_PROCESS_PLACEMENT=off
+export I_MPI_PERHOST=1
+# Process pinning
+export I_MPI_PIN=enable
+export I_MPI_PIN_PROCESSOR_LIST="allcores:map=scatter" # map=spread
+
+# Add Module Path for Mercator Installation
+export MODULEPATH=/home/ext/mr/smer/soniv/SAVE/modulefiles:$MODULEPATH
+# Add Pearl Lib
+PATH="/home/ext/mr/smer/soniv/perl5/bin${PATH:+:${PATH}}"; export PATH;
+PERL5LIB="/home/ext/mr/smer/soniv/perl5/lib/perl5${PERL5LIB:+:${PERL5LIB}}"; export PERL5LIB;
+
+MODULE_LIST="\
+   intel/2018.5.274\
+   intelmpi/2018.5.274\
+   phdf5/1.8.18\
+   netcdf_par/4.7.1_V2\
+   xios-2.5_rev1903"
+
+module_ksh ()
+{
+  eval `/usr/bin/modulecmd ksh $*`
+}
+
+if [ -n "${MODULE_LIST}" ] ; then
+   module_ksh purge
+   for module in ${MODULE_LIST} ; do
+      module_ksh load ${module}
+   done
+fi
+module_ksh list
+#################################################
+# CREATE DIRECTORY AND LINK FILES
+mkdir $WORK_DIR
+cd $WORK_DIR
+ln -fs ${DOMAINcfg_DIR}/make_domain_cfg.exe .
+ln -fs ${DOMAINcfg_DIR}/make_namelist.py .
+ln -fs ${DOMAINcfg_DIR}/namelist_ref .
+ln -fs ${DOMAINcfg_DIR}/namelist_ref 1_namelist_ref
+
+cp ${INP_DIR}/${NAMELIST} namelist_cfg
+cp ${INP_DIR}/${NAMELIST_1} 1_namelist_cfg
+cp ${INP_DIR}/${AGRIF_FILE} AGRIF_FixedGrids.in
+ln -fs ${BATHY_FILE} bathy_meter.nc
+ln -fs ${COORD_FILE} coordinates.nc
+ln -fs ${emodNETFILE} emodNET_2018.nc
+ln -fs ${DOMCFG_INIT} domain_cfg_init.nc
+ln -fs ${DOMCFG_INIT_update} 1_domain_cfg_update.nc
+mpirun -np 128 ./make_domain_cfg.exe
+
+EXE_RBLD=/home/ext/mr/smer/brivoalt/NEMO4/trunk_r4.2-RC/tools/REBUILD_NEMO/rebuild_nemo
+${EXE_RBLD} -p 8 1_domain_cfg 128
+${EXE_RBLD} -p 8 domain_cfg 128
+rm -f *domain_cfg_0???.nc
+#
+
+
+
+
+
