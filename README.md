@@ -43,7 +43,7 @@ _Figure : Snapshot of the surface current vorticity other the 1/36° eNEATL36 ar
 ## Create the input mesh files : 
 
 * Launch domaincfg tool with the namelists in https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/tree/main/NAMELISTS/DOMAINCFG
-* An example of domain_cfg slurm script is available here : https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/blob/main/SCRIPTS/DOMAINcfg/run_domain_cfg_eNEATL36_AGRIF_newdomain_GEBCO.sub
+* An example of domain_cfg slurm script is available here : https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/blob/main/SCRIPTS/DOMAINcfg/run_domain_cfg_eNEATL36_AGRIF_emodNET2018_finaldomain_corrected_with_FES2014.sub
 
 ## Run a eNEATL46-AGRIF simulation : 
 
@@ -54,4 +54,7 @@ _Figure : Snapshot of the surface current vorticity other the 1/36° eNEATL36 ar
 
 * The namelists for the simulation are available here : https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/tree/main/NAMELISTS/RUN 
 
+## Additionnal tools : 
 
+* A tool to update the runoffs files over the parent meshmask and to extrapolate it over the child grid is available here : https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/tree/main/SCRIPTS/TOOLS/MOVE_RUNOFFS
+* Additional scripts to facilitate the use of the REBUILD_NEMO tool are available here : https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/tree/main/SCRIPTS/TOOLS/REBUILD
