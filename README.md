@@ -52,7 +52,12 @@ _Figure : Snapshot of the surface current vorticity other the 1/36° eNEATL36 ar
 2 : Change paths (and modules eventually) in `NEMO_4_2_AGRIF_RUN_INI.sub`   
 3 : submit INI job `sbatch NEMO_4_2_AGRIF_RUN_INI.sub`  
 
-* The namelists for the simulation are available here : https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/tree/main/NAMELISTS/RUN 
+* The namelists for the simulation are available here : 
+https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/tree/main/NAMELISTS/RUN 
+
+* The namelists for XIOS are available here : 
+https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/tree/main/NAMELISTS/XML
+
 
 ## Additionnal tools : 
 
