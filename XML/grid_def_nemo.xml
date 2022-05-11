@@ -28,6 +28,10 @@
     <domain domain_ref="grid_T" />
     <axis axis_ref="deptht" />
   </grid>
+  <grid id="grid_T_2D_15m" >
+    <domain domain_ref="grid_T" />
+    <axis axis_ref="deptht15" />
+  </grid>
   <grid id="grid_T_3D_inner" >
     <domain domain_ref="grid_T_inner" />
     <axis axis_ref="deptht" />
@@ -53,6 +57,10 @@
     <domain domain_ref="grid_U" />
     <axis axis_ref="depthu" />
   </grid>
+  <grid id="grid_U_2D_15m" >
+    <domain domain_ref="grid_U" />
+    <axis axis_ref="depthu15" />
+  </grid>
   <grid id="grid_U_3D_inner" >
     <domain domain_ref="grid_U_inner" />
     <axis axis_ref="depthu" />
@@ -68,6 +76,10 @@
   <grid id="grid_V_3D" >
     <domain domain_ref="grid_V" />
     <axis axis_ref="depthv" />
+  </grid>
+  <grid id="grid_V_2D_15m" >
+    <domain domain_ref="grid_V" />
+    <axis axis_ref="depthv15" />
   </grid>
   <grid id="grid_V_3D_inner" >
     <domain domain_ref="grid_V_inner" />

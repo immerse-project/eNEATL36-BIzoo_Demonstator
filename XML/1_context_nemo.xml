@@ -28,8 +28,17 @@
     
     <axis_definition>
       <axis id="deptht"  long_name="Vertical T levels" unit="m" positive="down" />
+      <axis id="deptht15" axis_ref="deptht" >
+      <zoom_axis begin="10" n="1" />
+      </axis>
       <axis id="depthu"  long_name="Vertical U levels" unit="m" positive="down" />
+      <axis id="depthu15" axis_ref="depthu" >
+      <zoom_axis begin="10" n="1" />
+      </axis>
       <axis id="depthv"  long_name="Vertical V levels" unit="m" positive="down" />
+      <axis id="depthv15" axis_ref="depthv" >
+      <zoom_axis begin="10" n="1" />
+      </axis>
       <axis id="depthw"  long_name="Vertical W levels" unit="m" positive="down" />
       <axis id="nfloat"  long_name="Float number"      unit="-"                 />
       <axis id="icbcla"  long_name="Iceberg class"     unit="1"                 />

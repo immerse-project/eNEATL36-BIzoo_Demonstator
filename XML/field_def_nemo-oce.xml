@@ -123,6 +123,8 @@ that are available in the tidal-forcing implementation (see
     <field id="soce_e3t"     long_name="salinity    (thickness weighted)"                                                      unit="1e-3"     grid_ref="grid_T_3D" > soce * e3t </field >
 
     <field id="toce_e3t_300"      field_ref="toce_e3t"          unit="degree_C"     grid_ref="grid_T_zoom_300"      detect_missing_value="true" />
+    <field id="toce_15m"      field_ref="toce"          unit="degree_C"     grid_ref="grid_T_2D_15m"      detect_missing_value="true" />
+    <field id="soce_15m"      field_ref="soce"          unit="1e-3"     grid_ref="grid_T_2D_15m"      detect_missing_value="true" />
     <field id="toce_e3t_vsum300"  field_ref="toce_e3t_300"      unit="degress_C*m"  grid_ref="grid_T_vsum"  detect_missing_value="true" />
     <field id="toce_vmean300"     field_ref="toce_e3t_vsum300"  unit="degree_C"     grid_ref="grid_T_vsum"  detect_missing_value="true" > toce_e3t_vsum300/e3t_vsum300 </field>
 
@@ -134,7 +136,6 @@ that are available in the tidal-forcing implementation (see
     <field id="sssgrad2"    long_name="square of module of surface salinity gradient"    unit="1e-6/m2"  grid_ref="grid_T_2D_inner"/>
     <field id="ke"          long_name="kinetic energy"          standard_name="specific_kinetic_energy_of_sea_water"   unit="m2/s2"  grid_ref="grid_T_3D" />
     <field id="ke_int"      long_name="vertical integration of kinetic energy"   unit="m3/s2"  grid_ref="grid_T_2D_inner" />
-    <field id="salt2c"      long_name="Salt content vertically integrated"       unit="1e-3*kg/m2" />
 
     <!-- t-eddy viscosity coefficients (ldfdyn) -->
     <field id="ahmt_2d"      long_name=" surface t-eddy viscosity coefficient"   unit="m2/s or m4/s"                      />
@@ -178,8 +179,8 @@ that are available in the tidal-forcing implementation (see
     <field id="mldr10_1max"  long_name="Max of Mixed Layer Depth (dsigma = 0.01 wrt 10m)"   field_ref="mldr10_1"   operation="maximum"                                                                          />
     <field id="mldr10_1min"  long_name="Min of Mixed Layer Depth (dsigma = 0.01 wrt 10m)"   field_ref="mldr10_1"   operation="minimum"                                                                          />
     <field id="heatc"        long_name="Heat content vertically integrated"                 standard_name="integral_of_sea_water_potential_temperature_wrt_depth_expressed_as_heat_content"   unit="J/m2"      grid_ref="grid_T_2D_inner" />
-    <field id="saltc"        long_name="Salt content vertically integrated"                                                                                                                   unit="1e-3.m"    grid_ref="grid_T_2D_inner" />
-    <field id="saltc2"       long_name="square of Salt content vertically integrated"                                                                                                         unit="1e-6.m2"   grid_ref="grid_T_2D_inner" />
+    <field id="saltc"        long_name="Salt content vertically integrated"                                                                                                                   unit="PSU*kg/m2"    grid_ref="grid_T_2D_inner" />
+    <field id="salt2c"       long_name="square of Salt content vertically integrated"                                                                                                         unit="PSU2*kg/m2"   grid_ref="grid_T_2D_inner" />
 
     <!-- EOS -->
     <field id="alpha"        long_name="thermal expansion"                                                         unit="degC-1" grid_ref="grid_T_3D" />
@@ -587,6 +588,7 @@ that are available in the tidal-forcing implementation (see
     <field id="e3u_0"         long_name="Initial U-cell thickness"                               standard_name="ref_cell_thickness"          unit="m"          grid_ref="grid_U_3D"/>
     <field id="utau"          long_name="Wind Stress along i-axis"                               standard_name="surface_downward_x_stress"   unit="N/m2"                            />
     <field id="uoce"          long_name="ocean current along i-axis"                             standard_name="sea_water_x_velocity"        unit="m/s"        grid_ref="grid_U_3D" />
+    <field id="uoce_15m"      field_ref="uoce"          unit="m/s"     grid_ref="grid_U_2D_15m"      detect_missing_value="true" />
     <field id="uoce_e3u"      long_name="ocean current along i-axis  (thickness weighted)"                                                   unit="m/s"        grid_ref="grid_U_3D"  > uoce * e3u </field>
     <field id="uoce_e3u_vsum" long_name="ocean current along i-axis * e3u summed on the vertical"  field_ref="uoce_e3u"    unit="m3/s"       grid_ref="grid_U_vsum"/>
     <field id="uocetr_vsum"   long_name="ocean transport along i-axis  summed on the vertical"         field_ref="e2u"       unit="m3/s"> this * uoce_e3u_vsum  </field>
@@ -655,6 +657,7 @@ that are available in the tidal-forcing implementation (see
     <field id="hv"            long_name="water column height at V point"                        standard_name="water_column_height_V"       unit="m" />
     <field id="vtau"         long_name="Wind Stress along j-axis"                               standard_name="surface_downward_y_stress"   unit="N/m2"                            />
     <field id="voce"         long_name="ocean current along j-axis"                             standard_name="sea_water_y_velocity"        unit="m/s"        grid_ref="grid_V_3D" />
+    <field id="voce_15m"      field_ref="voce"          unit="m/s"     grid_ref="grid_V_2D_15m"      detect_missing_value="true" />
     <field id="voce_e3v"     long_name="ocean current along j-axis  (thickness weighted)"                                                   unit="m/s"        grid_ref="grid_V_3D"  > voce * e3v </field>
     <field id="ssv"          long_name="ocean surface current along j-axis"                                                                 unit="m/s"                             />
     <field id="sbv"          long_name="ocean bottom current along j-axis"                                                                  unit="m/s"  grid_ref="grid_V_2D_inner" />
