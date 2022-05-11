@@ -1,3 +1,4 @@
+#undef PARENT_EXT_BDY
 MODULE agrif_oce_interp
    !!======================================================================
    !!                   ***  MODULE  agrif_oce_interp  ***
@@ -82,6 +83,7 @@ CONTAINS
       l_ini_child           = .TRUE.
       Agrif_SpecialValue    = 0.0_wp
       Agrif_UseSpecialValue = .TRUE.
+      l_vremap              = ln_vert_remap
 
       ts(:,:,:,:,Kbb) = 0.0_wp
       uu(:,:,:,Kbb)   = 0.0_wp
@@ -100,6 +102,7 @@ CONTAINS
 
       Agrif_UseSpecialValue = .FALSE.
       l_ini_child           = .FALSE.
+      l_vremap              = .FALSE. 
 
       Krhs_a = Kaa   ;   Kmm_a = Kmm
 
@@ -115,7 +118,7 @@ CONTAINS
    END SUBROUTINE Agrif_istate_oce
 
 
-   SUBROUTINE Agrif_istate_ssh( Kbb, Kmm, Kaa )
+   SUBROUTINE Agrif_istate_ssh( Kbb, Kmm, Kaa, ghosts_only )
       !!----------------------------------------------------------------------
       !!                 *** ROUTINE agrif_istate_ssh ***
       !!
@@ -125,6 +128,8 @@ CONTAINS
       IMPLICIT NONE
       !
       INTEGER, INTENT(in)  :: Kbb, Kmm, Kaa 
+      LOGICAL, INTENT(in), OPTIONAL :: ghosts_only
+      LOGICAL :: l_do_all
       !!----------------------------------------------------------------------
       IF(lwp) WRITE(numout,*) ' '
       IF(lwp) WRITE(numout,*) 'Agrif_istate_ssh : interp child ssh from parent'
@@ -134,14 +139,20 @@ CONTAINS
       IF ( .NOT.Agrif_Parent(l_1st_euler) ) & 
          & CALL ctl_stop('AGRIF hot start requires to force Euler first step on parent')
 
+      l_do_all = .TRUE.
+      IF (present(ghosts_only)) l_do_all = .FALSE.
+
       Krhs_a = Kbb   ;   Kmm_a = Kbb
       !
       Agrif_SpecialValue    = 0._wp
       Agrif_UseSpecialValue = .TRUE.
       l_ini_child           = .TRUE.
       !
-      ssh(:,:,Kbb) = 0._wp
-      CALL Agrif_Init_Variable(sshini_id, procname=interpsshn)
+      IF (l_do_all) THEN
+         CALL Agrif_Init_Variable(sshini_id, procname=interpsshn)
+      ELSE
+         CALL Agrif_Bc_Variable(sshini_id, calledweight=1._wp, procname=interpsshn)
+      ENDIF
       !
       Agrif_UseSpecialValue = .FALSE.
       l_ini_child           = .FALSE.
@@ -181,9 +192,11 @@ CONTAINS
       !!----------------------------------------------------------------------  
       INTEGER, INTENT(in) ::   kt
       !
-      INTEGER ::   ji, jj, jk       ! dummy loop indices
-      INTEGER ::   ibdy1, jbdy1, ibdy2, jbdy2
+      INTEGER  ::   ji, jj, jk       ! dummy loop indices
+      INTEGER  ::   ibdy1, jbdy1, ibdy2, jbdy2
+      REAL(wp) ::   zflag  
       REAL(wp), DIMENSION(jpi,jpj) ::   zub, zvb
+      REAL(wp), DIMENSION(jpi,jpj) ::   zhub, zhvb
       !!----------------------------------------------------------------------  
       !
       IF( Agrif_Root() )   RETURN
@@ -228,35 +241,45 @@ CONTAINS
          ENDIF
          !
          DO ji = mi0(ibdy1), mi1(ibdy2)
-            zub(ji,:) = 0._wp  
+            zub(ji,:)  = 0._wp  
+            zhub(ji,:) = 0._wp
             DO jk = 1, jpkm1
                DO jj = 1, jpj
-                  zub(ji,jj) = zub(ji,jj) + e3u(ji,jj,jk,Krhs_a)  * uu(ji,jj,jk,Krhs_a) * umask(ji,jj,jk)
+                  zflag = 0.5_wp - SIGN(0.5_wp, rn_hcri - e3u(ji,jj,jk,Krhs_a))
+                  zub(ji,jj)  =  zub(ji,jj) + zflag * e3u(ji,jj,jk,Krhs_a)  * uu(ji,jj,jk,Krhs_a) * umask(ji,jj,jk)
+                  zhub(ji,jj) = zhub(ji,jj) + zflag * e3u(ji,jj,jk,Krhs_a)  * umask(ji,jj,jk)
                END DO
             END DO
             DO jj=1,jpj
-               zub(ji,jj) = zub(ji,jj) * r1_hu(ji,jj,Krhs_a)
+!!               zub(ji,jj) = zub(ji,jj) * r1_hu(ji,jj,Krhs_a)
+               zub(ji,jj) = zub(ji,jj) / ( zhub(ji,jj) + 1._wp - ssumask(ji,jj))
             END DO 
             DO jk = 1, jpkm1
                DO jj = 1, jpj
-                  uu(ji,jj,jk,Krhs_a) = ( uu(ji,jj,jk,Krhs_a) + uu_b(ji,jj,Krhs_a) - zub(ji,jj) ) * umask(ji,jj,jk)
+                  zflag = 0.5_wp - SIGN(0.5_wp, rn_hcri - e3u(ji,jj,jk,Krhs_a))
+                  uu(ji,jj,jk,Krhs_a) = zflag * ( uu(ji,jj,jk,Krhs_a) + uu_b(ji,jj,Krhs_a) - zub(ji,jj) ) * umask(ji,jj,jk)
                END DO
             END DO
          END DO
          !   
          DO ji = mi0(ibdy1), mi1(ibdy2)
-            zvb(ji,:) = 0._wp
+            zvb(ji,:)  = 0._wp
+            zhvb(ji,:) = 0._wp
             DO jk = 1, jpkm1
                DO jj = 1, jpj
-                  zvb(ji,jj) = zvb(ji,jj) + e3v(ji,jj,jk,Krhs_a) * vv(ji,jj,jk,Krhs_a) * vmask(ji,jj,jk)
+                  zflag = 0.5_wp - SIGN(0.5_wp, rn_hcri - e3v(ji,jj,jk,Krhs_a))
+                  zvb(ji,jj)  =  zvb(ji,jj) + zflag * e3v(ji,jj,jk,Krhs_a) * vv(ji,jj,jk,Krhs_a) * vmask(ji,jj,jk)
+                  zhvb(ji,jj) = zhvb(ji,jj) + zflag * e3v(ji,jj,jk,Krhs_a) * vmask(ji,jj,jk)                  
                END DO
             END DO
             DO jj = 1, jpj
-               zvb(ji,jj) = zvb(ji,jj) * r1_hv(ji,jj,Krhs_a)
+!!               zvb(ji,jj) = zvb(ji,jj) * r1_hv(ji,jj,Krhs_a)
+               zvb(ji,jj) = zvb(ji,jj) / ( zhvb(ji,jj) + 1._wp - ssvmask(ji,jj))
             END DO
             DO jk = 1, jpkm1
                DO jj = 1, jpj
-                  vv(ji,jj,jk,Krhs_a) = ( vv(ji,jj,jk,Krhs_a) + vv_b(ji,jj,Krhs_a) - zvb(ji,jj) )*vmask(ji,jj,jk)
+                  zflag = 0.5_wp - SIGN(0.5_wp, rn_hcri - e3v(ji,jj,jk,Krhs_a))
+                  vv(ji,jj,jk,Krhs_a) = zflag * ( vv(ji,jj,jk,Krhs_a) + vv_b(ji,jj,Krhs_a) - zvb(ji,jj) )*vmask(ji,jj,jk)
                END DO
             END DO
          END DO
@@ -277,18 +300,23 @@ CONTAINS
          ENDIF
          !
          DO ji = mi0(ibdy1), mi1(ibdy2)
-            zub(ji,:) = 0._wp   
+            zub(ji,:)  = 0._wp 
+            zhub(ji,:) = 0._wp   
             DO jk = 1, jpkm1
                DO jj = 1, jpj
-                  zub(ji,jj) = zub(ji,jj) + e3u(ji,jj,jk,Krhs_a)  * uu(ji,jj,jk,Krhs_a) * umask(ji,jj,jk)
+                  zflag = 0.5_wp - SIGN(0.5_wp, rn_hcri - e3u(ji,jj,jk,Krhs_a))
+                  zub(ji,jj)  =  zub(ji,jj) + zflag * e3u(ji,jj,jk,Krhs_a)  * uu(ji,jj,jk,Krhs_a) * umask(ji,jj,jk)
+                  zhub(ji,jj) = zhub(ji,jj) + zflag * e3u(ji,jj,jk,Krhs_a)  * umask(ji,jj,jk)
                END DO
             END DO
             DO jj=1,jpj
-               zub(ji,jj) = zub(ji,jj) * r1_hu(ji,jj,Krhs_a)
+!!               zub(ji,jj) = zub(ji,jj) * r1_hu(ji,jj,Krhs_a)
+               zub(ji,jj) = zub(ji,jj) / ( zhub(ji,jj) + 1._wp - ssumask(ji,jj))
             END DO
             DO jk = 1, jpkm1
                DO jj = 1, jpj
-                  uu(ji,jj,jk,Krhs_a) = ( uu(ji,jj,jk,Krhs_a) + uu_b(ji,jj,Krhs_a) - zub(ji,jj) ) * umask(ji,jj,jk)
+                  zflag = 0.5_wp - SIGN(0.5_wp, rn_hcri - e3u(ji,jj,jk,Krhs_a))
+                  uu(ji,jj,jk,Krhs_a) = zflag * ( uu(ji,jj,jk,Krhs_a) + uu_b(ji,jj,Krhs_a) - zub(ji,jj) ) * umask(ji,jj,jk)
                END DO
             END DO
          END DO
@@ -305,18 +333,23 @@ CONTAINS
          ENDIF
          !
          DO ji = mi0(ibdy1), mi1(ibdy2)
-            zvb(ji,:) = 0._wp
+            zvb(ji,:)  = 0._wp
+            zhvb(ji,:) = 0._wp
             DO jk = 1, jpkm1
                DO jj = 1, jpj
-                     zvb(ji,jj) = zvb(ji,jj) + e3v(ji,jj,jk,Krhs_a) * vv(ji,jj,jk,Krhs_a) * vmask(ji,jj,jk)
+                  zflag = 0.5_wp - SIGN(0.5_wp, rn_hcri - e3v(ji,jj,jk,Krhs_a))
+                  zvb(ji,jj)  =  zvb(ji,jj) + zflag * e3v(ji,jj,jk,Krhs_a) * vv(ji,jj,jk,Krhs_a) * vmask(ji,jj,jk)
+                  zhvb(ji,jj) = zhvb(ji,jj) + zflag * e3v(ji,jj,jk,Krhs_a) * vmask(ji,jj,jk)
                END DO
             END DO
             DO jj = 1, jpj
-               zvb(ji,jj) = zvb(ji,jj) * r1_hv(ji,jj,Krhs_a)
+!!               zvb(ji,jj) = zvb(ji,jj) * r1_hv(ji,jj,Krhs_a)
+               zvb(ji,jj) = zvb(ji,jj) / ( zhvb(ji,jj) + 1._wp - ssvmask(ji,jj))
             END DO
             DO jk = 1, jpkm1
                DO jj = 1, jpj
-                     vv(ji,jj,jk,Krhs_a) = ( vv(ji,jj,jk,Krhs_a) + vv_b(ji,jj,Krhs_a) - zvb(ji,jj) ) * vmask(ji,jj,jk)
+                  zflag = 0.5_wp - SIGN(0.5_wp, rn_hcri - e3v(ji,jj,jk,Krhs_a))
+                  vv(ji,jj,jk,Krhs_a) = zflag * ( vv(ji,jj,jk,Krhs_a) + vv_b(ji,jj,Krhs_a) - zvb(ji,jj) ) * vmask(ji,jj,jk)
                END DO
             END DO
          END DO
@@ -339,34 +372,44 @@ CONTAINS
          !
          DO jj = mj0(jbdy1), mj1(jbdy2)
             zvb(:,jj) = 0._wp
+            zhvb(:,jj) = 0._wp
             DO jk=1,jpkm1
                DO ji=1,jpi
-                  zvb(ji,jj) = zvb(ji,jj) + e3v(ji,jj,jk,Krhs_a) * vv(ji,jj,jk,Krhs_a) * vmask(ji,jj,jk)
+                  zflag = 0.5_wp - SIGN(0.5_wp, rn_hcri - e3v(ji,jj,jk,Krhs_a))
+                  zvb(ji,jj)  =  zvb(ji,jj) + zflag * e3v(ji,jj,jk,Krhs_a) * vv(ji,jj,jk,Krhs_a) * vmask(ji,jj,jk)
+                  zhvb(ji,jj) = zhvb(ji,jj) + zflag * e3v(ji,jj,jk,Krhs_a) * vmask(ji,jj,jk)
                END DO
             END DO
             DO ji = 1, jpi
-               zvb(ji,jj) = zvb(ji,jj) * r1_hv(ji,jj,Krhs_a)
+!!               zvb(ji,jj) = zvb(ji,jj) * r1_hv(ji,jj,Krhs_a)
+               zvb(ji,jj) = zvb(ji,jj) / ( zhvb(ji,jj) + 1._wp - ssvmask(ji,jj))
             END DO
             DO jk = 1, jpkm1
                DO ji = 1, jpi
-                  vv(ji,jj,jk,Krhs_a) = ( vv(ji,jj,jk,Krhs_a) + vv_b(ji,jj,Krhs_a) - zvb(ji,jj) ) * vmask(ji,jj,jk)
+                  zflag = 0.5_wp - SIGN(0.5_wp, rn_hcri - e3v(ji,jj,jk,Krhs_a))
+                  vv(ji,jj,jk,Krhs_a) = zflag * ( vv(ji,jj,jk,Krhs_a) + vv_b(ji,jj,Krhs_a) - zvb(ji,jj) ) * vmask(ji,jj,jk)
                END DO
             END DO
          END DO
          !
          DO jj = mj0(jbdy1), mj1(jbdy2)
             zub(:,jj) = 0._wp
+            zhub(:,jj) = 0._wp
             DO jk = 1, jpkm1
                DO ji = 1, jpi
-                  zub(ji,jj) = zub(ji,jj) + e3u(ji,jj,jk,Krhs_a) * uu(ji,jj,jk,Krhs_a) * umask(ji,jj,jk)
+                  zflag = 0.5_wp - SIGN(0.5_wp, rn_hcri - e3u(ji,jj,jk,Krhs_a))
+                  zub(ji,jj)  =  zub(ji,jj) + zflag * e3u(ji,jj,jk,Krhs_a) * uu(ji,jj,jk,Krhs_a) * umask(ji,jj,jk)
+                  zhub(ji,jj) = zhub(ji,jj) + zflag * e3u(ji,jj,jk,Krhs_a) * umask(ji,jj,jk)
                END DO
             END DO
             DO ji = 1, jpi
-               zub(ji,jj) = zub(ji,jj) * r1_hu(ji,jj,Krhs_a)
+!!               zub(ji,jj) = zub(ji,jj) * r1_hu(ji,jj,Krhs_a)
+               zub(ji,jj) = zub(ji,jj) / ( zhub(ji,jj) + 1._wp - ssumask(ji,jj))
             END DO
             DO jk = 1, jpkm1
                DO ji = 1, jpi
-                  uu(ji,jj,jk,Krhs_a) = ( uu(ji,jj,jk,Krhs_a) + uu_b(ji,jj,Krhs_a) - zub(ji,jj) ) * umask(ji,jj,jk)
+                  zflag = 0.5_wp - SIGN(0.5_wp, rn_hcri - e3u(ji,jj,jk,Krhs_a))
+                  uu(ji,jj,jk,Krhs_a) = zflag * ( uu(ji,jj,jk,Krhs_a) + uu_b(ji,jj,Krhs_a) - zub(ji,jj) ) * umask(ji,jj,jk)
                END DO
             END DO
          END DO
@@ -388,17 +431,22 @@ CONTAINS
          !
          DO jj = mj0(jbdy1), mj1(jbdy2)
             zvb(:,jj) = 0._wp 
+            zhvb(:,jj) = 0._wp 
             DO jk=1,jpkm1
                DO ji=1,jpi
-                  zvb(ji,jj) = zvb(ji,jj) + e3v(ji,jj,jk,Krhs_a) * vv(ji,jj,jk,Krhs_a) * vmask(ji,jj,jk)
+                  zflag = 0.5_wp - SIGN(0.5_wp, rn_hcri - e3v(ji,jj,jk,Krhs_a))
+                  zvb(ji,jj) = zvb(ji,jj) + zflag * e3v(ji,jj,jk,Krhs_a) * vv(ji,jj,jk,Krhs_a) * vmask(ji,jj,jk)
+                  zhvb(ji,jj) = zhvb(ji,jj) + zflag * e3v(ji,jj,jk,Krhs_a) * vmask(ji,jj,jk)
                END DO
             END DO
             DO ji = 1, jpi
-               zvb(ji,jj) = zvb(ji,jj) * r1_hv(ji,jj,Krhs_a)
+!!               zvb(ji,jj) = zvb(ji,jj) * r1_hv(ji,jj,Krhs_a)
+               zvb(ji,jj) = zvb(ji,jj) / ( zhvb(ji,jj) + 1._wp - ssvmask(ji,jj))
             END DO
             DO jk = 1, jpkm1
                DO ji = 1, jpi
-                  vv(ji,jj,jk,Krhs_a) = ( vv(ji,jj,jk,Krhs_a) + vv_b(ji,jj,Krhs_a) - zvb(ji,jj) ) * vmask(ji,jj,jk)
+                  zflag = 0.5_wp - SIGN(0.5_wp, rn_hcri - e3v(ji,jj,jk,Krhs_a))
+                  vv(ji,jj,jk,Krhs_a) = zflag * ( vv(ji,jj,jk,Krhs_a) + vv_b(ji,jj,Krhs_a) - zvb(ji,jj) ) * vmask(ji,jj,jk)
                END DO
             END DO
          END DO
@@ -416,17 +464,22 @@ CONTAINS
          !
          DO jj = mj0(jbdy1), mj1(jbdy2)
             zub(:,jj) = 0._wp
+            zhub(:,jj) = 0._wp
             DO jk = 1, jpkm1
                DO ji = 1, jpi
-                  zub(ji,jj) = zub(ji,jj) + e3u(ji,jj,jk,Krhs_a) * uu(ji,jj,jk,Krhs_a) * umask(ji,jj,jk)
+                  zflag = 0.5_wp - SIGN(0.5_wp, rn_hcri - e3u(ji,jj,jk,Krhs_a))
+                  zub(ji,jj)  =  zub(ji,jj) + zflag * e3u(ji,jj,jk,Krhs_a) * uu(ji,jj,jk,Krhs_a) * umask(ji,jj,jk)
+                  zhub(ji,jj) = zhub(ji,jj) + zflag * e3u(ji,jj,jk,Krhs_a) * umask(ji,jj,jk)
                END DO
             END DO
             DO ji = 1, jpi
-               zub(ji,jj) = zub(ji,jj) * r1_hu(ji,jj,Krhs_a)
+               !!zub(ji,jj) = zub(ji,jj) * r1_hu(ji,jj,Krhs_a)
+               zub(ji,jj) = zub(ji,jj) / ( zhub(ji,jj) + 1._wp - ssumask(ji,jj))
             END DO
             DO jk = 1, jpkm1
                DO ji = 1, jpi
-                     uu(ji,jj,jk,Krhs_a) = ( uu(ji,jj,jk,Krhs_a) + uu_b(ji,jj,Krhs_a) - zub(ji,jj) ) * umask(ji,jj,jk)
+                  zflag = 0.5_wp - SIGN(0.5_wp, rn_hcri - e3u(ji,jj,jk,Krhs_a))
+                  uu(ji,jj,jk,Krhs_a) = zflag * ( uu(ji,jj,jk,Krhs_a) + uu_b(ji,jj,Krhs_a) - zub(ji,jj) ) * umask(ji,jj,jk)
                END DO
             END DO
          END DO
@@ -446,70 +499,81 @@ CONTAINS
       INTEGER :: istart, iend, jstart, jend
       !!----------------------------------------------------------------------  
       !
-      IF( Agrif_Root() )   RETURN
-      !
-      !--- West ---!
-      IF( lk_west ) THEN
-         istart = nn_hls + 2                              ! halo + land + 1
-         iend   = nn_hls + nbghostcells  + nn_shift_bar*Agrif_Rhox()              ! halo + land + nbghostcells
-         DO ji = mi0(istart), mi1(iend)
-            DO jj=1,jpj
-               va_e(ji,jj) = vbdy(ji,jj) * hvr_e(ji,jj)
-               ua_e(ji,jj) = ubdy(ji,jj) * hur_e(ji,jj)
+      IF( Agrif_Root() ) THEN
+#if defined PARENT_EXT_BDY
+         ! Assume persistance for barotropic mode well inside overlapping zone
+         ua_e(:,:) =            umask_upd(:,:)  * uu_b(:,:,Kmm_a)              &
+                   &                            * hu(:,:,Kmm_a) * hur_e(:,:)   &
+                   & + (1._wp - umask_upd(:,:)) * ua_e(:,:)
+         va_e(:,:) =            vmask_upd(:,:)  * vv_b(:,:,Kmm_a)              &
+                   &                            * hv(:,:,Kmm_a) * hvr_e(:,:)   &
+                   & + (1._wp - vmask_upd(:,:)) * va_e(:,:)
+#endif
+      ELSE
+         !
+         !--- West ---!
+         IF( lk_west ) THEN
+            istart = nn_hls + 2                              ! halo + land + 1
+            iend   = nn_hls + nbghostcells  + nn_shift_bar*Agrif_Rhox()              ! halo + land + nbghostcells
+            DO ji = mi0(istart), mi1(iend)
+               DO jj=1,jpj
+                  va_e(ji,jj) = vbdy(ji,jj) * hvr_e(ji,jj)
+                  ua_e(ji,jj) = ubdy(ji,jj) * hur_e(ji,jj)
+               END DO
             END DO
-         END DO
+         ENDIF
+         !
+         !--- East ---!
+         IF( lk_east ) THEN
+            istart = jpiglo - ( nn_hls + nbghostcells -1 ) - nn_shift_bar*Agrif_Rhox() 
+            iend   = jpiglo - ( nn_hls + 1 )                
+            DO ji = mi0(istart), mi1(iend)
+   
+               DO jj=1,jpj
+                  va_e(ji,jj) = vbdy(ji,jj) * hvr_e(ji,jj)
+               END DO
+            END DO
+            istart = jpiglo - ( nn_hls + nbghostcells ) - nn_shift_bar*Agrif_Rhox() 
+            iend   = jpiglo - ( nn_hls + 2 )                
+            DO ji = mi0(istart), mi1(iend)
+               DO jj=1,jpj
+                  ua_e(ji,jj) = ubdy(ji,jj) * hur_e(ji,jj)
+               END DO
+            END DO
+         ENDIF 
+         !
+         !--- South ---!
+         IF( lk_south ) THEN
+            jstart = nn_hls + 2                              
+            jend   = nn_hls + nbghostcells + nn_shift_bar*Agrif_Rhoy()           
+            DO jj = mj0(jstart), mj1(jend)
+   
+               DO ji=1,jpi
+                  ua_e(ji,jj) = ubdy(ji,jj) * hur_e(ji,jj)
+                  va_e(ji,jj) = vbdy(ji,jj) * hvr_e(ji,jj)
+               END DO
+            END DO
+         ENDIF       
+         !
+         !--- North ---!
+         IF( lk_north ) THEN
+            jstart = jpjglo - ( nn_hls + nbghostcells -1 ) - nn_shift_bar*Agrif_Rhoy()     
+            jend   = jpjglo - ( nn_hls + 1 )                
+            DO jj = mj0(jstart), mj1(jend)
+               DO ji=1,jpi
+                  ua_e(ji,jj) = ubdy(ji,jj) * hur_e(ji,jj)
+               END DO
+            END DO
+            jstart = jpjglo - ( nn_hls + nbghostcells ) - nn_shift_bar*Agrif_Rhoy() 
+            jend   = jpjglo - ( nn_hls + 2 )                
+            DO jj = mj0(jstart), mj1(jend)
+               DO ji=1,jpi
+                  va_e(ji,jj) = vbdy(ji,jj) * hvr_e(ji,jj)
+               END DO
+            END DO
+         ENDIF 
+         !
       ENDIF
-      !
-      !--- East ---!
-      IF( lk_east ) THEN
-         istart = jpiglo - ( nn_hls + nbghostcells -1 ) - nn_shift_bar*Agrif_Rhox() 
-         iend   = jpiglo - ( nn_hls + 1 )                
-         DO ji = mi0(istart), mi1(iend)
-
-            DO jj=1,jpj
-               va_e(ji,jj) = vbdy(ji,jj) * hvr_e(ji,jj)
-            END DO
-         END DO
-         istart = jpiglo - ( nn_hls + nbghostcells ) - nn_shift_bar*Agrif_Rhox() 
-         iend   = jpiglo - ( nn_hls + 2 )                
-         DO ji = mi0(istart), mi1(iend)
-            DO jj=1,jpj
-               ua_e(ji,jj) = ubdy(ji,jj) * hur_e(ji,jj)
-            END DO
-         END DO
-      ENDIF 
-      !
-      !--- South ---!
-      IF( lk_south ) THEN
-         jstart = nn_hls + 2                              
-         jend   = nn_hls + nbghostcells + nn_shift_bar*Agrif_Rhoy()           
-         DO jj = mj0(jstart), mj1(jend)
-
-            DO ji=1,jpi
-               ua_e(ji,jj) = ubdy(ji,jj) * hur_e(ji,jj)
-               va_e(ji,jj) = vbdy(ji,jj) * hvr_e(ji,jj)
-            END DO
-         END DO
-      ENDIF       
-      !
-      !--- North ---!
-      IF( lk_north ) THEN
-         jstart = jpjglo - ( nn_hls + nbghostcells -1 ) - nn_shift_bar*Agrif_Rhoy()     
-         jend   = jpjglo - ( nn_hls + 1 )                
-         DO jj = mj0(jstart), mj1(jend)
-            DO ji=1,jpi
-               ua_e(ji,jj) = ubdy(ji,jj) * hur_e(ji,jj)
-            END DO
-         END DO
-         jstart = jpjglo - ( nn_hls + nbghostcells ) - nn_shift_bar*Agrif_Rhoy() 
-         jend   = jpjglo - ( nn_hls + 2 )                
-         DO jj = mj0(jstart), mj1(jend)
-            DO ji=1,jpi
-               va_e(ji,jj) = vbdy(ji,jj) * hvr_e(ji,jj)
-            END DO
-         END DO
-      ENDIF 
-      !
    END SUBROUTINE Agrif_dyn_ts
 
    
@@ -524,66 +588,77 @@ CONTAINS
       INTEGER :: istart, iend, jstart, jend
       !!----------------------------------------------------------------------  
       !
-      IF( Agrif_Root() )   RETURN
-      !
-      !--- West ---!
-      IF( lk_west ) THEN
-         istart = nn_hls + 2                              
-         iend   = nn_hls + nbghostcells + nn_shift_bar*Agrif_Rhox() 
-         DO ji = mi0(istart), mi1(iend)
-            DO jj=1,jpj
-               zv(ji,jj) = vbdy(ji,jj) * e1v(ji,jj)
-               zu(ji,jj) = ubdy(ji,jj) * e2u(ji,jj)
+      IF( Agrif_Root() ) THEN
+#if defined PARENT_EXT_BDY
+         ! Assume persistance for barotropic mode well inside overlapping zone
+         zu(:,:) =              umask_upd(:,:)  * uu_b(:,:,Kmm_a)             &
+                   &                            *   hu(:,:,Kmm_a) * e2u(:,:)  &
+                   & + (1._wp - umask_upd(:,:)) *   zu(:,:)
+         zv(:,:) =              vmask_upd(:,:)  * vv_b(:,:,Kmm_a)             &
+                   &                            *   hv(:,:,Kmm_a) * e1v(:,:)  &
+                   & + (1._wp - vmask_upd(:,:)) *   zv(:,:)
+#endif
+      ELSE 
+         !
+         !--- West ---!
+         IF( lk_west ) THEN
+            istart = nn_hls + 2                              
+            iend   = nn_hls + nbghostcells + nn_shift_bar*Agrif_Rhox() 
+            DO ji = mi0(istart), mi1(iend)
+               DO jj=1,jpj
+                  zv(ji,jj) = vbdy(ji,jj) * e1v(ji,jj)
+                  zu(ji,jj) = ubdy(ji,jj) * e2u(ji,jj)
+               END DO
             END DO
-         END DO
-      ENDIF
-      !
-      !--- East ---!
-      IF( lk_east ) THEN
-         istart = jpiglo - ( nn_hls + nbghostcells -1 ) - nn_shift_bar*Agrif_Rhox()
-         iend   = jpiglo - ( nn_hls + 1 )                 
-         DO ji = mi0(istart), mi1(iend)
-            DO jj=1,jpj
-               zv(ji,jj) = vbdy(ji,jj) * e1v(ji,jj)
+         ENDIF
+         !
+         !--- East ---!
+         IF( lk_east ) THEN
+            istart = jpiglo - ( nn_hls + nbghostcells -1 ) - nn_shift_bar*Agrif_Rhox()
+            iend   = jpiglo - ( nn_hls + 1 )                 
+            DO ji = mi0(istart), mi1(iend)
+               DO jj=1,jpj
+                  zv(ji,jj) = vbdy(ji,jj) * e1v(ji,jj)
+               END DO
             END DO
-         END DO
-         istart = jpiglo - ( nn_hls + nbghostcells ) - nn_shift_bar*Agrif_Rhox() 
-         iend   = jpiglo - ( nn_hls + 2 )                 
-         DO ji = mi0(istart), mi1(iend)
-            DO jj=1,jpj
-               zu(ji,jj) = ubdy(ji,jj) * e2u(ji,jj)
+            istart = jpiglo - ( nn_hls + nbghostcells ) - nn_shift_bar*Agrif_Rhox() 
+            iend   = jpiglo - ( nn_hls + 2 )                 
+            DO ji = mi0(istart), mi1(iend)
+               DO jj=1,jpj
+                  zu(ji,jj) = ubdy(ji,jj) * e2u(ji,jj)
+               END DO
             END DO
-         END DO
-      ENDIF
-      !
-      !--- South ---!
-      IF( lk_south ) THEN
-         jstart = nn_hls + 2                              
-         jend   = nn_hls + nbghostcells + nn_shift_bar*Agrif_Rhoy() 
-         DO jj = mj0(jstart), mj1(jend)
-            DO ji=1,jpi
-               zu(ji,jj) = ubdy(ji,jj) * e2u(ji,jj)
-               zv(ji,jj) = vbdy(ji,jj) * e1v(ji,jj)
+         ENDIF
+         !
+         !--- South ---!
+         IF( lk_south ) THEN
+            jstart = nn_hls + 2                              
+            jend   = nn_hls + nbghostcells + nn_shift_bar*Agrif_Rhoy() 
+            DO jj = mj0(jstart), mj1(jend)
+               DO ji=1,jpi
+                  zu(ji,jj) = ubdy(ji,jj) * e2u(ji,jj)
+                  zv(ji,jj) = vbdy(ji,jj) * e1v(ji,jj)
+               END DO
             END DO
-         END DO
-      ENDIF
-      !
-      !--- North ---!
-      IF( lk_north ) THEN
-         jstart = jpjglo - ( nn_hls + nbghostcells -1 ) - nn_shift_bar*Agrif_Rhoy() 
-         jend   = jpjglo - ( nn_hls + 1 )                
-         DO jj = mj0(jstart), mj1(jend)
-            DO ji=1,jpi
-               zu(ji,jj) = ubdy(ji,jj) * e2u(ji,jj)
+         ENDIF
+         !
+         !--- North ---!
+         IF( lk_north ) THEN
+            jstart = jpjglo - ( nn_hls + nbghostcells -1 ) - nn_shift_bar*Agrif_Rhoy() 
+            jend   = jpjglo - ( nn_hls + 1 )                
+            DO jj = mj0(jstart), mj1(jend)
+               DO ji=1,jpi
+                  zu(ji,jj) = ubdy(ji,jj) * e2u(ji,jj)
+               END DO
             END DO
-         END DO
-         jstart = jpjglo - ( nn_hls + nbghostcells ) - nn_shift_bar*Agrif_Rhoy() 
-         jend   = jpjglo - ( nn_hls + 2 )               
-         DO jj = mj0(jstart), mj1(jend)
-            DO ji=1,jpi
-               zv(ji,jj) = vbdy(ji,jj) * e1v(ji,jj)
+            jstart = jpjglo - ( nn_hls + nbghostcells ) - nn_shift_bar*Agrif_Rhoy() 
+            jend   = jpjglo - ( nn_hls + 2 )               
+            DO jj = mj0(jstart), mj1(jend)
+               DO ji=1,jpi
+                  zv(ji,jj) = vbdy(ji,jj) * e1v(ji,jj)
+               END DO
             END DO
-         END DO
+         ENDIF
       ENDIF
       !
    END SUBROUTINE Agrif_dyn_ts_flux
@@ -607,7 +682,7 @@ CONTAINS
       !
       ! Interpolate barotropic fluxes
       Agrif_SpecialValue = 0._wp
-      Agrif_UseSpecialValue = ln_spc_dyn
+      Agrif_UseSpecialValue = ln_spc_dyn 
 
       use_sign_north = .TRUE.
       sign_north = -1.
@@ -618,13 +693,15 @@ CONTAINS
       vtint_stage(:,:) = 0
       !
       IF( ll_int_cons ) THEN  ! Conservative interpolation
-         IF ( lk_tint2d_notinterp ) THEN
-            Agrif_UseSpecialValue = .FALSE.
+         Agrif_UseSpecialValue = .FALSE. ! To ensure divergence conservation 
+         !
+         IF ( lk_tint2d_constant ) THEN
             CALL Agrif_Bc_variable( ub2b_interp_id, calledweight=1._wp, procname=interpub2b_const )
             CALL Agrif_Bc_variable( vb2b_interp_id, calledweight=1._wp, procname=interpvb2b_const ) 
             ! Divergence conserving correction terms:
-            IF ( Agrif_Rhox()>1 ) CALL Agrif_Bc_variable(    ub2b_cor_id, calledweight=1._wp, procname=ub2b_cor )
-            IF ( Agrif_Rhoy()>1 ) CALL Agrif_Bc_variable(    vb2b_cor_id, calledweight=1._wp, procname=vb2b_cor )
+! JC: Disable this until we found a workaround around masked corners:
+!            IF ( Agrif_Rhox()>1 ) CALL Agrif_Bc_variable(    ub2b_cor_id, calledweight=1._wp, procname=ub2b_cor )
+!            IF ( Agrif_Rhoy()>1 ) CALL Agrif_Bc_variable(    vb2b_cor_id, calledweight=1._wp, procname=vb2b_cor )
          ELSE
             ! order matters here !!!!!!
             CALL Agrif_Bc_variable( ub2b_interp_id, calledweight=1._wp, procname=interpub2b ) ! Time integrated
@@ -644,8 +721,13 @@ CONTAINS
          CALL Agrif_Bc_variable( unb_interp_id, procname=interpunb )
          CALL Agrif_Bc_variable( vnb_interp_id, procname=interpvnb )
       ENDIF
+      !
       Agrif_UseSpecialValue = .FALSE.
       use_sign_north = .FALSE.
+      !
+      ! Set ssh forcing over ghost zone:
+      ! No temporal interpolation here
+      IF (lk_div_cons)  CALL Agrif_Bc_variable( sshn_frc_id, calledweight=1._wp, procname=interpsshn_frc )
       ! 
    END SUBROUTINE Agrif_dta_ts
 
@@ -673,6 +755,7 @@ CONTAINS
       IF(lk_west) THEN
          istart = nn_hls + 2                                                          ! halo + land + 1
          iend   = nn_hls + nbghostcells + nn_shift_bar*Agrif_Rhox()               ! halo + land + nbghostcells
+         IF (lk_div_cons) iend = istart
          DO ji = mi0(istart), mi1(iend)
             DO jj = 1, jpj
                ssh(ji,jj,Krhs_a) = hbdy(ji,jj)
@@ -684,6 +767,7 @@ CONTAINS
       IF(lk_east) THEN
          istart = jpiglo - ( nn_hls + nbghostcells -1 ) - nn_shift_bar*Agrif_Rhox()       ! halo + land + nbghostcells - 1
          iend   = jpiglo - ( nn_hls + 1 )                                              ! halo + land + 1            - 1
+         IF (lk_div_cons) istart = iend
          DO ji = mi0(istart), mi1(iend)
             DO jj = 1, jpj
                ssh(ji,jj,Krhs_a) = hbdy(ji,jj)
@@ -695,6 +779,7 @@ CONTAINS
       IF(lk_south) THEN
          jstart = nn_hls + 2                                                          ! halo + land + 1
          jend   = nn_hls + nbghostcells + nn_shift_bar*Agrif_Rhoy()               ! halo + land + nbghostcells
+         IF (lk_div_cons) jend = jstart
          DO jj = mj0(jstart), mj1(jend)
             DO ji = 1, jpi
                ssh(ji,jj,Krhs_a) = hbdy(ji,jj)
@@ -706,6 +791,7 @@ CONTAINS
       IF(lk_north) THEN
          jstart = jpjglo - ( nn_hls + nbghostcells -1 ) - nn_shift_bar*Agrif_Rhoy()     ! halo + land + nbghostcells - 1
          jend   = jpjglo - ( nn_hls + 1 )                                            ! halo + land + 1            - 1
+         IF (lk_div_cons) jstart = jend
          DO jj = mj0(jstart), mj1(jend)
             DO ji = 1, jpi
                ssh(ji,jj,Krhs_a) = hbdy(ji,jj)
@@ -726,50 +812,61 @@ CONTAINS
       INTEGER  :: istart, iend, jstart, jend
       !!----------------------------------------------------------------------  
       !
-      IF( Agrif_Root() )   RETURN
-      !
-      ! --- West --- !
-      IF(lk_west) THEN
-         istart = nn_hls + 2                                                        ! halo + land + 1
-         iend   = nn_hls + nbghostcells + nn_shift_bar*Agrif_Rhox()             ! halo + land + nbghostcells
-         DO ji = mi0(istart), mi1(iend)
-            DO jj = 1, jpj
-               ssha_e(ji,jj) = hbdy(ji,jj)
+      IF( Agrif_Root() ) THEN 
+#if defined PARENT_EXT_BDY
+         ! Assume persistence well inside overlapping domain 
+         ssha_e(:,:) =            tmask_upd(:,:)  * ssh(:,:,Kmm_a) &
+                     & + (1._wp - tmask_upd(:,:)) * ssha_e(:,:)
+#endif
+      ELSE 
+         !
+         ! --- West --- !
+         IF(lk_west) THEN
+            istart = nn_hls + 2                                                        ! halo + land + 1
+            iend   = nn_hls + nbghostcells + nn_shift_bar*Agrif_Rhox()             ! halo + land + nbghostcells
+            IF (lk_div_cons) iend = istart
+            DO ji = mi0(istart), mi1(iend)
+               DO jj = 1, jpj
+                  ssha_e(ji,jj) = hbdy(ji,jj)
+               END DO
             END DO
-         END DO
-      ENDIF
-      !
-      ! --- East --- !
-      IF(lk_east) THEN
-         istart = jpiglo - ( nn_hls + nbghostcells -1 ) - nn_shift_bar*Agrif_Rhox()    ! halo + land + nbghostcells - 1
-         iend   = jpiglo - ( nn_hls + 1 )                                           ! halo + land + 1            - 1
-         DO ji = mi0(istart), mi1(iend)
-            DO jj = 1, jpj
-               ssha_e(ji,jj) = hbdy(ji,jj)
+         ENDIF
+         !
+         ! --- East --- !
+         IF(lk_east) THEN
+            istart = jpiglo - ( nn_hls + nbghostcells -1 ) - nn_shift_bar*Agrif_Rhox()    ! halo + land + nbghostcells - 1
+            iend   = jpiglo - ( nn_hls + 1 )                                           ! halo + land + 1            - 1
+            IF (lk_div_cons) istart = iend
+            DO ji = mi0(istart), mi1(iend)
+               DO jj = 1, jpj
+                  ssha_e(ji,jj) = hbdy(ji,jj)
+               END DO
             END DO
-         END DO
-      ENDIF
-      !
-      ! --- South --- !
-      IF(lk_south) THEN
-         jstart = nn_hls + 2                                                        ! halo + land + 1
-         jend   = nn_hls + nbghostcells + nn_shift_bar*Agrif_Rhoy()             ! halo + land + nbghostcells
-         DO jj = mj0(jstart), mj1(jend)
-            DO ji = 1, jpi
-               ssha_e(ji,jj) = hbdy(ji,jj)
+         ENDIF
+         !
+         ! --- South --- !
+         IF(lk_south) THEN
+            jstart = nn_hls + 2                                                        ! halo + land + 1
+            jend   = nn_hls + nbghostcells + nn_shift_bar*Agrif_Rhoy()             ! halo + land + nbghostcells
+            IF (lk_div_cons) jend   = jstart
+            DO jj = mj0(jstart), mj1(jend)
+               DO ji = 1, jpi
+                  ssha_e(ji,jj) = hbdy(ji,jj)
+               END DO
             END DO
-         END DO
-      ENDIF
-      !
-      ! --- North --- !
-      IF(lk_north) THEN
-         jstart = jpjglo - ( nn_hls + nbghostcells -1 ) - nn_shift_bar*Agrif_Rhoy()    ! halo + land + nbghostcells - 1
-         jend   = jpjglo - ( nn_hls + 1 )                                           ! halo + land + 1            - 1
-         DO jj = mj0(jstart), mj1(jend)
-            DO ji = 1, jpi
-               ssha_e(ji,jj) = hbdy(ji,jj)
+         ENDIF
+         !
+         ! --- North --- !
+         IF(lk_north) THEN
+            jstart = jpjglo - ( nn_hls + nbghostcells -1 ) - nn_shift_bar*Agrif_Rhoy()    ! halo + land + nbghostcells - 1
+            jend   = jpjglo - ( nn_hls + 1 )                                           ! halo + land + 1            - 1
+            IF (lk_div_cons) jstart = jend
+            DO jj = mj0(jstart), mj1(jend)
+               DO ji = 1, jpi
+                  ssha_e(ji,jj) = hbdy(ji,jj)
+               END DO
             END DO
-         END DO
+         ENDIF
       ENDIF
       !
    END SUBROUTINE Agrif_ssh_ts
@@ -811,7 +908,7 @@ CONTAINS
       ! vertical interpolation:
       REAL(wp) :: zhtot, zwgt
       REAL(wp), DIMENSION(k1:k2,1:jpts) :: tabin, tabin_i
-      REAL(wp), DIMENSION(k1:k2) :: z_in, h_in_i, z_in_i
+      REAL(wp), DIMENSION(k1:k2) :: z_in, h_in
       REAL(wp), DIMENSION(1:jpk) :: h_out, z_out
       !!----------------------------------------------------------------------
 
@@ -821,7 +918,7 @@ CONTAINS
          IF( l_ini_child )   Kmm_a = Kbb_a  
 
          DO jn = 1,jpts
-            DO jk=k1,k2
+            DO jk=k1,k2-1
                DO jj=j1,j2
                  DO ji=i1,i2
                        ptab(ji,jj,jk,jn) = ts(ji,jj,jk,jn,Kmm_a)
@@ -836,10 +933,10 @@ CONTAINS
             ! Warning: these are masked, hence extrapolated prior interpolation.
             DO jj=j1,j2
                DO ji=i1,i2
-                  ptab(ji,jj,k1,jpts+1) = 0.5_wp * tmask(ji,jj,k1) * e3t(ji,jj,k1,Kmm_a)
-                  DO jk=k1+1,k2
+                  ptab(ji,jj,k1,jpts+1) = 0.5_wp * tmask(ji,jj,k1) * e3w(ji,jj,k1,Kmm_a)
+                  DO jk=k1+1,k2-1
                      ptab(ji,jj,jk,jpts+1) = tmask(ji,jj,jk) * &
-                        & ( ptab(ji,jj,jk-1,jpts+1) + 0.5_wp * (e3t(ji,jj,jk-1,Kmm_a)+e3t(ji,jj,jk,Kmm_a)) )
+                        & ( ptab(ji,jj,jk-1,jpts+1) + e3w(ji,jj,jk,Kmm_a) ) 
                   END DO
                END DO
             END DO
@@ -856,51 +953,65 @@ CONTAINS
          IF( l_ini_child )   Krhs_a = Kbb_a  
 
          IF( l_vremap .OR. l_ini_child ) THEN
-            IF (ln_linssh) ptab(i1:i2,j1:j2,k2,n2) = 0._wp 
+            IF (ln_linssh) THEN
+               ptab(i1:i2,j1:j2,k2,n2) = 0._wp 
+
+            ELSE ! Assuming parent volume follows child:
+               ptab(i1:i2,j1:j2,k2,n2) = ssh(i1:i2,j1:j2,Krhs_a)          
+            ENDIF
+
             DO jj=j1,j2
                DO ji=i1,i2
-                  ts(ji,jj,:,:,Krhs_a) = 0.  
+                  ts(ji,jj,:,:,Krhs_a) = 0._wp  
                   !
                   ! Build vertical grids:
-                  N_in = mbkt_parent(ji,jj)
-                  N_out = mbkt(ji,jj)
+                  ! N_in = mbkt_parent(ji,jj)
+                  ! Input grid (account for partial cells if any):
+                  N_in = k2-1
+                  z_in(1) = ptab(ji,jj,1,n2) - ptab(ji,jj,k2,n2)
+                  DO jk=2,k2
+                     z_in(jk) = ptab(ji,jj,jk,n2) - ptab(ji,jj,k2,n2)
+                     IF (( z_in(jk) <= z_in(jk-1) ).OR.(z_in(jk)>ht_0(ji,jj))) EXIT
+                  END DO
+                  N_in = jk-1
+                  DO jk=1, N_in
+                     tabin(jk,1:jpts) = ptab(ji,jj,jk,1:jpts)
+                  END DO
+
+                  IF (ssmask(ji,jj)==1._wp) THEN
+                     N_out = mbkt(ji,jj)
+                  ELSE
+                     N_out = 0
+                  ENDIF
+
                   IF (N_in*N_out > 0) THEN
-                     ! Input grid (account for partial cells if any):
-                     DO jk=1,N_in
-                        z_in(jk) = ptab(ji,jj,jk,n2) - ptab(ji,jj,k2,n2)
-                        tabin(jk,1:jpts) = ptab(ji,jj,jk,1:jpts)
-                     END DO
-                  
-                     ! Intermediate grid:
                      IF ( l_vremap ) THEN
                         DO jk = 1, N_in
-                           h_in_i(jk) = e3t0_parent(ji,jj,jk) * & 
+                           h_in(jk) = e3t0_parent(ji,jj,jk) * & 
                              &       (1._wp + ptab(ji,jj,k2,n2)/(ht0_parent(ji,jj)*ssmask(ji,jj) + 1._wp - ssmask(ji,jj)))
                         END DO
-                        z_in_i(1) = 0.5_wp * h_in_i(1)
+                        z_in(1) = 0.5_wp * h_in(1)
                         DO jk=2,N_in
-                           z_in_i(jk) = z_in_i(jk-1) + 0.5_wp * ( h_in_i(jk) + h_in_i(jk-1) )
+                           z_in(jk) = z_in(jk-1) + 0.5_wp * ( h_in(jk) + h_in(jk-1) )
                         END DO
-                        z_in_i(1:N_in) = z_in_i(1:N_in)  - ptab(ji,jj,k2,n2)
+                        z_in(1:N_in) = z_in(1:N_in)  - ptab(ji,jj,k2,n2)
                      ENDIF                              
 
                      ! Output (Child) grid:
                      DO jk=1,N_out
                         h_out(jk) = e3t(ji,jj,jk,Krhs_a)
                      END DO
-                     z_out(1) = 0.5_wp * h_out(1)
+                     z_out(1) = 0.5_wp * e3w(ji,jj,1,Krhs_a) 
                      DO jk=2,N_out
-                        z_out(jk) = z_out(jk-1) + 0.5_wp * ( h_out(jk)+h_out(jk-1) )
+                        z_out(jk) = z_out(jk-1) + e3w(ji,jj,jk,Krhs_a) 
                      END DO
                      IF (.NOT.ln_linssh) z_out(1:N_out) = z_out(1:N_out)  - ssh(ji,jj,Krhs_a)
 
                      IF( l_ini_child ) THEN
-                        CALL remap_linear(tabin(1:N_in,1:jpts),z_in(1:N_in),ts(ji,jj,1:N_out,1:jpts,Krhs_a),              &
+                        CALL remap_linear(tabin(1:N_in,1:jpts),z_in(1:N_in),ts(ji,jj,1:N_out,1:jpts,Krhs_a),          &
                                       &   z_out(1:N_out),N_in,N_out,jpts)  
                      ELSE 
-                        CALL remap_linear(tabin(1:N_in,1:jpts),z_in(1:N_in),tabin_i(1:N_in,1:jpts),                       &
-                                     &   z_in_i(1:N_in),N_in,N_in,jpts)
-                        CALL reconstructandremap(tabin_i(1:N_in,1:jpts),h_in_i(1:N_in),ts(ji,jj,1:N_out,1:jpts,Krhs_a),   &
+                        CALL reconstructandremap(tabin(1:N_in,1:jpts),h_in(1:N_in),ts(ji,jj,1:N_out,1:jpts,Krhs_a),   &
                                       &   h_out(1:N_out),N_in,N_out,jpts)  
                      ENDIF
                   ENDIF
@@ -924,9 +1035,9 @@ CONTAINS
                         tabin(jk,1:jpts) = ptab(ji,jj,jk,1:jpts)
                      END DO
                      IF (.NOT.ln_linssh) z_in(1:N_in) = z_in(1:N_in) - ptab(ji,jj,k2,n2)
-                     z_out(1) = 0.5_wp * e3t(ji,jj,1,Krhs_a)
+                     z_out(1) = 0.5_wp * e3w(ji,jj,1,Krhs_a)
                      DO jk=2, N_out
-                        z_out(jk) = z_out(jk-1) + 0.5_wp * (e3t(ji,jj,jk-1,Krhs_a) + e3t(ji,jj,jk,Krhs_a))
+                        z_out(jk) = z_out(jk-1) + e3w(ji,jj,jk,Krhs_a) 
                      END DO
                      IF (.NOT.ln_linssh) z_out(1:N_out) = z_out(1:N_out) - ssh(ji,jj,Krhs_a)
                      CALL remap_linear(tabin(1:N_in,1:jpts),z_in(1:N_in),ptab(ji,jj,1:N_out,1:jpts), &
@@ -936,7 +1047,7 @@ CONTAINS
             ENDIF
 
             DO jn =1, jpts
-               ts(i1:i2,j1:j2,1:jpk,jn,Krhs_a) = ptab(i1:i2,j1:j2,1:jpk,jn)*tmask(i1:i2,j1:j2,1:jpk)
+               ts(i1:i2,j1:j2,1:jpkm1,jn,Krhs_a) = ptab(i1:i2,j1:j2,1:jpkm1,jn)*tmask(i1:i2,j1:j2,1:jpkm1)
             END DO
          ENDIF
 
@@ -968,6 +1079,25 @@ CONTAINS
    END SUBROUTINE interpsshn
 
    
+   SUBROUTINE interpsshn_frc( ptab, i1, i2, j1, j2, before )
+      !!----------------------------------------------------------------------
+      !!                  ***  ROUTINE interpsshn  ***
+      !!----------------------------------------------------------------------  
+      INTEGER                         , INTENT(in   ) ::   i1, i2, j1, j2
+      REAL(wp), DIMENSION(i1:i2,j1:j2), INTENT(inout) ::   ptab
+      LOGICAL                         , INTENT(in   ) ::   before
+      !
+      !!----------------------------------------------------------------------  
+      !
+      IF( before) THEN
+         ptab(i1:i2,j1:j2) = ssh_frc(i1:i2,j1:j2)
+      ELSE
+         ssh_frc(i1:i2,j1:j2) = ptab(i1:i2,j1:j2)
+      ENDIF
+      !
+   END SUBROUTINE interpsshn_frc
+
+
    SUBROUTINE interpun( ptab, i1, i2, j1, j2, k1, k2, m1, m2, before )
       !!----------------------------------------------------------------------
       !!                  *** ROUTINE interpun ***
@@ -978,12 +1108,12 @@ CONTAINS
       LOGICAL, INTENT(in) :: before
       !!
       INTEGER :: ji,jj,jk
-      REAL(wp) :: zrhoy, zhtot
+      REAL(wp) :: zrhoy
       ! vertical interpolation:
+      REAL(wp), DIMENSION(i1:i2,j1:j2) :: zsshu
       REAL(wp), DIMENSION(k1:k2) :: tabin, h_in, z_in
       REAL(wp), DIMENSION(1:jpk) :: h_out, z_out
-      INTEGER  :: N_in, N_out,item
-      REAL(wp) :: h_diff
+      INTEGER  :: N_in, N_out, item
       !!---------------------------------------------    
       !
       IF (before) THEN 
@@ -991,107 +1121,69 @@ CONTAINS
          item = Kmm_a
          IF( l_ini_child )   Kmm_a = Kbb_a     
 
-         DO jk=1,jpk
+         DO jk=k1,k2-1
             DO jj=j1,j2
                DO ji=i1,i2
                   ptab(ji,jj,jk,1) = (e2u(ji,jj) * e3u(ji,jj,jk,Kmm_a) * uu(ji,jj,jk,Kmm_a)*umask(ji,jj,jk)) 
-                  IF( l_vremap .OR. l_ini_child) THEN
-                     ! Interpolate thicknesses (masked for subsequent extrapolation)
-                     ptab(ji,jj,jk,2) = umask(ji,jj,jk) * e2u(ji,jj) * e3u(ji,jj,jk,Kmm_a)
-                  ENDIF
+                  !!IF( l_vremap .OR. l_ini_child) THEN
+                  !!   ! Interpolate thicknesses (masked for subsequent extrapolation)
+                  !!   ptab(ji,jj,jk,2) = umask(ji,jj,jk) * e2u(ji,jj) * e3u(ji,jj,jk,Kmm_a)
+                  !!ENDIF
                END DO
             END DO
          END DO
 
-        IF( l_vremap .OR. l_ini_child ) THEN
-         ! Extrapolate thicknesses in partial bottom cells:
-         ! Set them to Agrif_SpecialValue (0.). Correct bottom thicknesses are retrieved later on
-            IF (ln_zps) THEN
-               DO jj=j1,j2
-                  DO ji=i1,i2
-                     jk = mbku(ji,jj)
-                     ptab(ji,jj,jk,2) = 0._wp
-                  END DO
-               END DO           
-            END IF
-
-           ! Save ssh at last level:
-           ptab(i1:i2,j1:j2,k2,2) = 0._wp
-           IF (.NOT.ln_linssh) THEN
-              ! This vertical sum below should be replaced by the sea-level at U-points (optimization):
-              DO jk=1,jpk
-                 ptab(i1:i2,j1:j2,k2,2) = ptab(i1:i2,j1:j2,k2,2) + e3u(i1:i2,j1:j2,jk,Kmm_a) * umask(i1:i2,j1:j2,jk)
-              END DO
-              ptab(i1:i2,j1:j2,k2,2) = ptab(i1:i2,j1:j2,k2,2) - hu_0(i1:i2,j1:j2)
-           END IF
-        ENDIF
-
          Kmm_a = item
-         !
+         
       ELSE
          zrhoy = Agrif_rhoy()
 
-        IF( l_vremap .OR. l_ini_child) THEN
-! VERTICAL REFINEMENT BEGIN
+         IF( l_vremap ) THEN
 
-            IF (ln_linssh) ptab(i1:i2,j1:j2,k2,2) = 0._wp 
+            zsshu(i1:i2,j1:j2) = 0._wp 
+            
+            IF ( .NOT.ln_linssh ) THEN
+               zsshu(i1:i2,j1:j2) = hu(i1:i2,j1:j2,Krhs_a) - hu_0(i1:i2,j1:j2)   
+            ENDIF   
 
             DO ji=i1,i2
                DO jj=j1,j2
                   uu(ji,jj,:,Krhs_a) = 0._wp
-                  N_in = mbku_parent(ji,jj)
+                  N_in  = mbku_parent(ji,jj)
                   N_out = mbku(ji,jj)
                   IF (N_in*N_out > 0) THEN
-                     zhtot = 0._wp
+
                      DO jk=1,N_in
-                        !IF (jk==N_in) THEN
-                        !   h_in(jk) = hu0_parent(ji,jj) + ptab(ji,jj,k2,2) - zhtot
-                        !ELSE
-                        !   h_in(jk) = ptab(ji,jj,jk,2)/(e2u(ji,jj)*zrhoy) 
-                        !ENDIF
-                        IF ( l_vremap ) THEN
-                           h_in(jk) = e3u0_parent(ji,jj,jk) 
-                        ELSE
-                           IF (jk==N_in) THEN
-                              h_in(jk) = hu0_parent(ji,jj) + ptab(ji,jj,k2,2) - zhtot
-                           ELSE
-                              h_in(jk) = ptab(ji,jj,jk,2)/(e2u(ji,jj)*zrhoy) 
-                           ENDIF
-                        ENDIF
-                        zhtot = zhtot + h_in(jk)
-                        IF( h_in(jk) .GT. 0. ) THEN
-                           tabin(jk) = ptab(ji,jj,jk,1)/(e2u(ji,jj)*zrhoy*h_in(jk))
-                        ELSE
-                           tabin(jk) = 0.
-                        ENDIF
-                    END DO
-                    z_in(1) = 0.5_wp * h_in(1) - zhtot + hu0_parent(ji,jj) 
-                    DO jk=2,N_in
-                       z_in(jk) = z_in(jk-1) + 0.5_wp * (h_in(jk)+h_in(jk-1))
-                    END DO
+                        h_in(jk)  = e3u0_parent(ji,jj,jk) * & 
+                             &       (1._wp + zsshu(ji,jj)/(hu0_parent(ji,jj)*ssumask(ji,jj) + 1._wp - ssumask(ji,jj)))
+                        tabin(jk) = ptab(ji,jj,jk,1) / (e2u(ji,jj)*zrhoy*h_in(jk))
+                     END DO
                      
-                    DO jk=1, N_out
-                       h_out(jk) = e3u(ji,jj,jk,Krhs_a)
-                    END DO
+                     DO jk=1, N_out
+                        h_out(jk) = e3u(ji,jj,jk,Krhs_a)
+                     END DO
 
-                    z_out(1) = 0.5_wp * h_out(1) - SUM(h_out(1:N_out)) + hu_0(ji,jj)
-                    DO jk=2,N_out
-                       z_out(jk) = z_out(jk-1) + 0.5_wp * (h_out(jk-1) + h_out(jk)) 
-                    END DO  
+                     IF( l_ini_child ) THEN
+                        z_in(1) = 0.5_wp * h_in(1)
+                        DO jk=2,N_in
+                           z_in(jk) = z_in(jk-1) + 0.5_wp * (h_in(jk)+h_in(jk-1))
+                        END DO
+                        !
+                        z_out(1) = 0.5_wp * h_out(1)
+                        DO jk=2,N_out
+                           z_out(jk) = z_out(jk-1) + 0.5_wp * (h_out(jk-1) + h_out(jk)) 
+                        END DO  
 
-                    IF( l_ini_child ) THEN
-                       CALL remap_linear       (tabin(1:N_in),z_in(1:N_in),uu(ji,jj,1:N_out,Krhs_a),z_out(1:N_out),N_in,N_out,1)
-                    ELSE
-                       CALL reconstructandremap(tabin(1:N_in),h_in(1:N_in),uu(ji,jj,1:N_out,Krhs_a),h_out(1:N_out),N_in,N_out,1)
-                    ENDIF   
-                 ENDIF
+                        CALL remap_linear       (tabin(1:N_in),z_in(1:N_in),uu(ji,jj,1:N_out,Krhs_a),z_out(1:N_out),N_in,N_out,1)
+                     ELSE
+                        CALL reconstructandremap(tabin(1:N_in),h_in(1:N_in),uu(ji,jj,1:N_out,Krhs_a),h_out(1:N_out),N_in,N_out,1)
+                     ENDIF   
+                  ENDIF
                END DO
             END DO
          ELSE
             DO jk = 1, jpkm1
-               DO jj=j1,j2
-                  uu(i1:i2,jj,jk,Krhs_a) = ptab(i1:i2,jj,jk,1) / ( zrhoy * e2u(i1:i2,jj) * e3u(i1:i2,jj,jk,Krhs_a) )
-               END DO
+               uu(i1:i2,j1:j2,jk,Krhs_a) = ptab(i1:i2,j1:j2,jk,1) / ( zrhoy * e2u(i1:i2,j1:j2) * e3u(i1:i2,j1:j2,jk,Krhs_a) )
             END DO
          ENDIF
 
@@ -1112,10 +1204,10 @@ CONTAINS
       INTEGER :: ji,jj,jk
       REAL(wp) :: zrhox
       ! vertical interpolation:
+      REAL(wp), DIMENSION(i1:i2,j1:j2) :: zsshv
       REAL(wp), DIMENSION(k1:k2) :: tabin, h_in, z_in
       REAL(wp), DIMENSION(1:jpk) :: h_out, z_out
       INTEGER  :: N_in, N_out, item
-      REAL(wp) :: h_diff, zhtot
       !!---------------------------------------------    
       !      
       IF (before) THEN   
@@ -1123,94 +1215,59 @@ CONTAINS
          item = Kmm_a
          IF( l_ini_child )   Kmm_a = Kbb_a     
        
-         DO jk=k1,k2
+         DO jk=k1,k2-1
             DO jj=j1,j2
                DO ji=i1,i2
                   ptab(ji,jj,jk,1) = (e1v(ji,jj) * e3v(ji,jj,jk,Kmm_a) * vv(ji,jj,jk,Kmm_a)*vmask(ji,jj,jk))
-                  IF( l_vremap .OR. l_ini_child) THEN
-                     ! Interpolate thicknesses (masked for subsequent extrapolation)
-                     ptab(ji,jj,jk,2) = vmask(ji,jj,jk) * e1v(ji,jj) * e3v(ji,jj,jk,Kmm_a)
-                  ENDIF
+                  !!IF( l_vremap .OR. l_ini_child) THEN
+                  !!   ! Interpolate thicknesses (masked for subsequent extrapolation)
+                  !!   ptab(ji,jj,jk,2) = vmask(ji,jj,jk) * e1v(ji,jj) * e3v(ji,jj,jk,Kmm_a)
+                  !!ENDIF
                END DO
             END DO
          END DO
 
-         IF( l_vremap .OR. l_ini_child) THEN
-         ! Extrapolate thicknesses in partial bottom cells:
-         ! Set them to Agrif_SpecialValue (0.). Correct bottom thicknesses are retrieved later on
-            IF (ln_zps) THEN
-               DO jj=j1,j2
-                  DO ji=i1,i2
-                     jk = mbkv(ji,jj)
-                     ptab(ji,jj,jk,2) = 0._wp
-                  END DO
-               END DO           
-            END IF
-            ! Save ssh at last level:
-            ptab(i1:i2,j1:j2,k2,2) = 0._wp
-            IF (.NOT.ln_linssh) THEN
-               ! This vertical sum below should be replaced by the sea-level at V-points (optimization):
-               DO jk=1,jpk
-                  ptab(i1:i2,j1:j2,k2,2) = ptab(i1:i2,j1:j2,k2,2) + e3v(i1:i2,j1:j2,jk,Kmm_a) * vmask(i1:i2,j1:j2,jk)
-               END DO
-               ptab(i1:i2,j1:j2,k2,2) = ptab(i1:i2,j1:j2,k2,2) - hv_0(i1:i2,j1:j2)
-            END IF 
-         ENDIF
-         item = Kmm_a
+         Kmm_a = item
 
       ELSE       
          zrhox = Agrif_rhox()
 
-         IF( l_vremap .OR. l_ini_child ) THEN
+         IF( l_vremap ) THEN
 
-            IF (ln_linssh) ptab(i1:i2,j1:j2,k2,2) = 0._wp 
+            zsshv(i1:i2,j1:j2) = 0._wp 
+            
+            IF ( .NOT.ln_linssh ) THEN
+               zsshv(i1:i2,j1:j2) = hv(i1:i2,j1:j2,Krhs_a) - hv_0(i1:i2,j1:j2)   
+            ENDIF   
 
-            DO jj=j1,j2
-               DO ji=i1,i2
+            DO ji=i1,i2
+               DO jj=j1,j2
                   vv(ji,jj,:,Krhs_a) = 0._wp
-                  N_in = mbkv_parent(ji,jj)
+                  N_in  = mbkv_parent(ji,jj)
                   N_out = mbkv(ji,jj)
-
                   IF (N_in*N_out > 0) THEN
-                     zhtot = 0._wp
+
                      DO jk=1,N_in
-                        !IF (jk==N_in) THEN
-                        !   h_in(jk) = hv0_parent(ji,jj) + ptab(ji,jj,k2,2) - zhtot
-                        !ELSE
-                        !   h_in(jk) = ptab(ji,jj,jk,2)/(e1v(ji,jj)*zrhox) 
-                        !ENDIF
-                        IF (l_vremap) THEN
-                           h_in(jk) = e3v0_parent(ji,jj,jk)
-                        ELSE
-                           IF (jk==N_in) THEN
-                              h_in(jk) = hv0_parent(ji,jj) + ptab(ji,jj,k2,2) - zhtot
-                           ELSE
-                              h_in(jk) = ptab(ji,jj,jk,2)/(e1v(ji,jj)*zrhox) 
-                           ENDIF
-                        ENDIF
-                        zhtot = zhtot + h_in(jk)
-                        IF( h_in(jk) .GT. 0. ) THEN
-                          tabin(jk) = ptab(ji,jj,jk,1)/(e1v(ji,jj)*zrhox*h_in(jk))
-                        ELSE
-                          tabin(jk)  = 0.
-                        ENDIF 
+                        h_in(jk)  = e3v0_parent(ji,jj,jk) * & 
+                             &       (1._wp + zsshv(ji,jj)/(hv0_parent(ji,jj)*ssvmask(ji,jj) + 1._wp - ssvmask(ji,jj)))
+                        tabin(jk) = ptab(ji,jj,jk,1) / (e1v(ji,jj)*zrhox*h_in(jk))
                      END DO
-
-                     z_in(1) = 0.5_wp * h_in(1) - zhtot + hv0_parent(ji,jj)
-                     DO jk=2,N_in
-                        z_in(jk) = z_in(jk-1) + 0.5_wp * (h_in(jk-1)+h_in(jk))
-                     END DO
-
-                     DO jk=1,N_out
+                     
+                     DO jk=1, N_out
                         h_out(jk) = e3v(ji,jj,jk,Krhs_a)
                      END DO
 
-                     z_out(1) = 0.5_wp * h_out(1) - SUM(h_out(1:N_out)) + hv_0(ji,jj)
-                     DO jk=2,N_out
-                        z_out(jk) = z_out(jk-1) + 0.5_wp * (h_out(jk-1)+h_out(jk))
-                     END DO
- 
                      IF( l_ini_child ) THEN
+                        z_in(1) = 0.5_wp * h_in(1)
+                        DO jk=2,N_in
+                           z_in(jk) = z_in(jk-1) + 0.5_wp * (h_in(jk)+h_in(jk-1))
+                        END DO
+                        !
+                        z_out(1) = 0.5_wp * h_out(1)
+                        DO jk=2,N_out
+                           z_out(jk) = z_out(jk-1) + 0.5_wp * (h_out(jk-1) + h_out(jk)) 
+                        END DO  
+
                         CALL remap_linear       (tabin(1:N_in),z_in(1:N_in),vv(ji,jj,1:N_out,Krhs_a),z_out(1:N_out),N_in,N_out,1)
                      ELSE
                         CALL reconstructandremap(tabin(1:N_in),h_in(1:N_in),vv(ji,jj,1:N_out,Krhs_a),h_out(1:N_out),N_in,N_out,1)
@@ -1375,7 +1432,8 @@ CONTAINS
       !!----------------------------------------------------------------------  
       IF( before ) THEN
 !         IF ( ln_bt_fw ) THEN
-            ptab(i1:i2,j1:j2) = e2u(i1:i2,j1:j2) * ub2_b(i1:i2,j1:j2)
+            ptab(i1:i2,j1:j2) = e2u(i1:i2,j1:j2) * ub2_b(i1:i2,j1:j2) &
+                                * umask(i1:i2,j1:j2,1)
 !         ELSE
 !            ptab(i1:i2,j1:j2) = e2u(i1:i2,j1:j2) * un_adv(i1:i2,j1:j2)
 !         ENDIF
@@ -1408,10 +1466,12 @@ CONTAINS
          jmin = MAX(j1, 2) ; jmax = MIN(j2, jpj-1)
          DO ji=imin,imax
             DO jj=jmin,jmax
-               ptab(ji,jj) = 0.25_wp*( ( vb2_b(ji+1,jj  )*e1v(ji+1,jj  )   & 
-                           &            -vb2_b(ji-1,jj  )*e1v(ji-1,jj  ) ) &
-                           &          -( vb2_b(ji+1,jj-1)*e1v(ji+1,jj-1)   &
-                           &            -vb2_b(ji-1,jj-1)*e1v(ji-1,jj-1) ) )
+               ptab(ji,jj) = 0.25_wp *(vmask(ji,jj  ,1)                        & 
+                           &       * ( vb2_b(ji+1,jj  )*e1v(ji+1,jj  )         & 
+                           &          -vb2_b(ji-1,jj  )*e1v(ji-1,jj  ) )       &
+                           &          -vmask(ji,jj-1,1)                        & 
+                           &       * ( vb2_b(ji+1,jj-1)*e1v(ji+1,jj-1)         &
+                           &          -vb2_b(ji-1,jj-1)*e1v(ji-1,jj-1) ) )      
             END DO
          END DO 
       ELSE
@@ -1482,7 +1542,8 @@ CONTAINS
       !!----------------------------------------------------------------------  
       IF( before ) THEN
 !         IF ( ln_bt_fw ) THEN
-            ptab(i1:i2,j1:j2) = e1v(i1:i2,j1:j2) * vb2_b(i1:i2,j1:j2)
+            ptab(i1:i2,j1:j2) = e1v(i1:i2,j1:j2) * vb2_b(i1:i2,j1:j2) &
+                                * vmask(i1:i2,j1:j2,1)
 !         ELSE
 !            ptab(i1:i2,j1:j2) = e1v(i1:i2,j1:j2) * vn_adv(i1:i2,j1:j2)
 !         ENDIF
@@ -1507,7 +1568,7 @@ CONTAINS
       !
       INTEGER  :: ji, jj
       INTEGER  :: imin, imax, jmin, jmax
-      REAL(wp) :: zrhox, zrhoy, zy
+      REAL(wp) :: zrhox, zrhoy, zy, zslope1, zslope2
       !!----------------------------------------------------------------------  
       IF( before ) THEN
          ptab(:,:) = 0._wp
@@ -1515,10 +1576,12 @@ CONTAINS
          jmin = MAX(j1, 2) ; jmax = MIN(j2, jpj-1)
          DO ji=imin,imax
             DO jj=jmin,jmax
-               ptab(ji,jj) = 0.25_wp*( ( ub2_b(ji  ,jj+1)*e2u(ji  ,jj+1)   & 
-                           &            -ub2_b(ji  ,jj-1)*e2u(ji  ,jj-1) ) &
-                           &          -( ub2_b(ji-1,jj+1)*e2u(ji-1,jj+1)   &
-                           &            -ub2_b(ji-1,jj-1)*e2u(ji-1,jj-1) ) )
+               ptab(ji,jj) = 0.25_wp *(umask(ji  ,jj,1)                      & 
+                           &       * ( ub2_b(ji  ,jj+1)*e2u(ji  ,jj+1)       & 
+                           &          -ub2_b(ji  ,jj-1)*e2u(ji  ,jj-1) )     &
+                           &          -umask(ji-1,jj,1)                      & 
+                           &       * ( ub2_b(ji-1,jj+1)*e2u(ji-1,jj+1)       &
+                           &          -ub2_b(ji-1,jj-1)*e2u(ji-1,jj-1) ) )   
             END DO
          END DO 
       ELSE
@@ -1755,9 +1818,9 @@ CONTAINS
       !!----------------------------------------------------------------------  
       !
       IF( before) THEN
-         ptab(i1:i2,j1:j2) = ht_0(i1:i2,j1:j2)
+         ptab(i1:i2,j1:j2) = ht_0(i1:i2,j1:j2) * ssmask(i1:i2,j1:j2)
       ELSE
-         ht0_parent(i1:i2,j1:j2) = ptab(i1:i2,j1:j2)
+         ht0_parent(i1:i2,j1:j2) = ptab(i1:i2,j1:j2) * ssmask(i1:i2,j1:j2)
       ENDIF
       !
    END SUBROUTINE interpht0
@@ -1777,8 +1840,12 @@ CONTAINS
       IF (before) THEN
          tabres(i1:i2,j1:j2) = e1e2t(i1:i2,j1:j2)
       ELSE
-         e1e2t_frac(i1:i2,j1:j2) = e1e2t(i1:i2,j1:j2) &
-              & / tabres(i1:i2,j1:j2) * Agrif_Rhox() * Agrif_Rhoy()
+         WHERE (tabres(i1:i2,j1:j2)/=0._wp)
+            e1e2t_frac(i1:i2,j1:j2) = e1e2t(i1:i2,j1:j2) &
+                 & / tabres(i1:i2,j1:j2) * Agrif_Rhox() * Agrif_Rhoy()
+         ELSEWHERE
+            e1e2t_frac(i1:i2,j1:j2) = 1._wp
+         END WHERE
       ENDIF
       !
    END SUBROUTINE interp_e1e2t_frac
@@ -1798,8 +1865,12 @@ CONTAINS
       IF (before) THEN
          tabres(i1:i2,j1:j2) = e2u(i1:i2,j1:j2)
       ELSE
-         e2u_frac(i1:i2,j1:j2) = e2u(i1:i2,j1:j2) &
-              & / tabres(i1:i2,j1:j2) * Agrif_Rhoy()
+         WHERE (tabres(i1:i2,j1:j2)/=0._wp)
+            e2u_frac(i1:i2,j1:j2) = e2u(i1:i2,j1:j2) &
+                 & / tabres(i1:i2,j1:j2) * Agrif_Rhoy()
+         ELSE WHERE
+            e2u_frac(i1:i2,j1:j2) = 1._wp
+         END WHERE
       ENDIF
       !
    END SUBROUTINE interp_e2u_frac
@@ -1819,8 +1890,12 @@ CONTAINS
       IF (before) THEN
          tabres(i1:i2,j1:j2) = e1v(i1:i2,j1:j2)
       ELSE
-         e1v_frac(i1:i2,j1:j2) = e1v(i1:i2,j1:j2) &
-              & / tabres(i1:i2,j1:j2) * Agrif_Rhox()
+         WHERE (tabres(i1:i2,j1:j2)/=0._wp)
+            e1v_frac(i1:i2,j1:j2) = e1v(i1:i2,j1:j2) &
+                 & / tabres(i1:i2,j1:j2) * Agrif_Rhox()
+         ELSE WHERE
+            e1v_frac(i1:i2,j1:j2) = 1._wp
+         END WHERE
       ENDIF
       !
    END SUBROUTINE interp_e1v_frac

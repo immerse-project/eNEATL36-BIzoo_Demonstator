@@ -374,7 +374,7 @@ CONTAINS
          &  iom_use( 'uadv_salttr' ) .OR. iom_use( 'udiff_salttr' ) .OR. &
          &  iom_use( 'vadv_heattr' ) .OR. iom_use( 'vdiff_heattr' ) .OR. &
          &  iom_use( 'vadv_salttr' ) .OR. iom_use( 'vdiff_salttr' ) .OR. &
-         &  iom_use( 'rhop' )  ) l_ar5 = .TRUE.
+         &  iom_use( 'rhop' )  ) L_ar5 = .TRUE.
 
       IF( l_ar5 ) THEN
          !
