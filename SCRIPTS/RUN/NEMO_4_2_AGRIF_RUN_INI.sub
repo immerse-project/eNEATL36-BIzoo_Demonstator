@@ -3,30 +3,32 @@
 #SBATCH -N 30
 #SBATCH --exclusive
 #SBATCH --no-requeue
-#SBATCH --time=00:59:00
+#SBATCH --time=03:59:00
 #SBATCH --account=cmems
 ######################################################
 #PARAMETERS
 CONFIGNM="eNEATL36"
 CONFIGNM_1="AGRIF"
-NAMCFG=/home/ext/mr/smer/brivoalt/NEMO4/trunk_r4.2-RC/cfgs/eNEATL36_AGRIF_vvl/EXP_AGRIF/namelist_cfg_EXP01_AGRIF
-NAMCFG_1=/home/ext/mr/smer/brivoalt/NEMO4/trunk_r4.2-RC/cfgs/eNEATL36_AGRIF_vvl/EXP_AGRIF/1_namelist_cfg_EXP01_AGRIF
-NAM_AGRIF=/scratch/work/brivoalt/MAKE_DOMAINcfg/MESHES_v0.2/AGRIF_FixedGrids.in
+NAMCFG=/home/ext/mr/smer/brivoalt/NEMO4/trunk_nemo_git/cfgs/eNEATL36_AGRIF_qco/EXP_AGRIF/namelist_cfg_EXP02_AGRIF_boost_noslip
+NAMCFG_1=/home/ext/mr/smer/brivoalt/NEMO4/trunk_nemo_git/cfgs/eNEATL36_AGRIF_qco/EXP_AGRIF/1_namelist_cfg_EXP02_AGRIF_boost2_noslip
+#NAMCFG_1=/home/ext/mr/smer/brivoalt/NEMO4/trunk_nemo_git/cfgs/eNEATL36_AGRIF_qco/EXP_AGRIF/1_namelist_cfg_EXP01_AGRIF_rnf
+NAM_AGRIF=/scratch/work/brivoalt/MAKE_DOMAINcfg/eNEATL36_AGRIF_emodNET2018_finaldomain_corrected_with_FES2014/AGRIF_FixedGrids.in
 RESTART_OCE=restart_oce.nc
 RESTART_OCE_1=restart_oce.nc
-DINI=2017-08-23 # Initial date YYYY-MM-DD
-DSTART=20170823 # Start date (of the run) YYYYMMDD
-SEG_LEN=8640 # In time step
+DINI=2017-01-04 # Initial date YYYY-MM-DD
+DSTART=20170104 # Start date (of the run) YYYYMMDD
+SEG_LEN=9216 # In time step
 RATIO_TS_AGRIF=3
 SEG_LEN_1=$(($SEG_LEN * $RATIO_TS_AGRIF ))
 NITEND=$SEG_LEN
 NITEND_1=$SEG_LEN_1
-NLASTSEG=1
+NLASTSEG=4
 NSEG=1
 DT_NEMO=150
 DT_NEMO_1=$(($DT_NEMO / $RATIO_TS_AGRIF ))
 NIT00=1 # Always one for this program
 NIT00_1=1 # Always one for this program
+gridlist="1h_gridT 1h_gridV 1h_gridU 1h_gridV_15m 1h_gridU_15m 1h_gridT_15m 1d_gridW25h 1d_gridV_2D 1d_gridV25h 1d_gridU_2D 1d_gridU25h 1d_gridT25h 1d_gridS25h 1d_grid2D25h 1d_grid2D"
 ######################################################
 # Comm/Fabric
 # -----------
@@ -103,7 +105,7 @@ module load phdf5/1.8.18
 module load netcdf_par/4.7.1_V2
 export NETCDF_CONFIG=$NETCDFF_BIN/nf-config
 
-export NEMOCONF_DIR=/home/ext/mr/smer/brivoalt/NEMO4/trunk_r4.2-RC/cfgs
+export NEMOCONF_DIR=/home/ext/mr/smer/brivoalt/NEMO4/trunk_nemo_git/cfgs
 export XIOS_DIR=/home/ext/mr/smer/samsong/SRC/XIOS/trunk/BEL_INTEL18_r2134
 PATH="/home/ext/mr/smer/soniv/perl5/bin${PATH:+:${PATH}}"; export PATH;                                                                                                      
 PERL5LIB="/home/ext/mr/smer/soniv/perl5/lib/perl5${PERL5LIB:+:${PERL5LIB}}"; export PERL5LIB;
@@ -113,7 +115,7 @@ PERL5LIB="/home/ext/mr/smer/soniv/perl5/lib/perl5${PERL5LIB:+:${PERL5LIB}}"; exp
 # -------------------------------------------------------
 
 #~~~~~~ NEMO
-ln -sf ${NEMOCONF_DIR}/eNEATL36_AGRIF_vvl/BLD/bin/nemo.exe .
+ln -sf ${NEMOCONF_DIR}/eNEATL36_AGRIF_qco/BLD/bin/nemo.exe .
 #~~~~~~ XIOS
 ln -sf ${XIOS_DIR}/bin/xios_server.exe .
 
@@ -165,34 +167,36 @@ cp ${NEMOCONF_DIR}/SHARED/namelist_ref 1_namelist_ref
 cp ${NEMOCONF_DIR}/SHARED/domain_def_nemo.xml .
 cp ${NEMOCONF_DIR}/SHARED/field_def_nemo-oce.xml .
 cp ${NEMOCONF_DIR}/SHARED/grid_def_nemo.xml .
-cp ${NEMOCONF_DIR}/eNEATL36_AGRIF_vvl/EXP_AGRIF/file_def_nemo-oce.xml.tmp file_def_nemo-oce.xml
-cp ${NEMOCONF_DIR}/eNEATL36_AGRIF_vvl/EXP_AGRIF/iodef.xml .
-cp ${NEMOCONF_DIR}/eNEATL36_AGRIF_vvl/EXP_AGRIF/context_nemo.xml .
-cp ${NEMOCONF_DIR}/eNEATL36_AGRIF_vvl/EXP_AGRIF/1_context_nemo.xml 1_context_nemo.xml
+cp ${NEMOCONF_DIR}/eNEATL36_AGRIF_qco/EXP_AGRIF/file_def_nemo-oce.xml.immerse file_def_nemo-oce.xml
+cp ${NEMOCONF_DIR}/eNEATL36_AGRIF_qco/EXP_AGRIF/iodef.xml .
+cp ${NEMOCONF_DIR}/eNEATL36_AGRIF_qco/EXP_AGRIF/context_nemo.xml .
+cp ${NEMOCONF_DIR}/eNEATL36_AGRIF_qco/EXP_AGRIF/1_context_nemo.xml 1_context_nemo.xml
 cp ${NAM_AGRIF} AGRIF_FixedGrids.in
 #~~~~~~ FILES INPUTS
-#ln -fs /scratch/work/brivoalt/MAKE_DOMAINcfg/MESHES_v0.2/domain_cfg.nc .
-#ln -fs /scratch/work/brivoalt/MAKE_DOMAINcfg/MESHES_v0.2/1_domain_cfg.nc .
-ln -fs /scratch/work/brivoalt/MAKE_DOMAINcfg/eNEATL36_AGRIF_newdomain_GEBCO/domain_cfg.nc .
-ln -fs /scratch/work/brivoalt/MAKE_DOMAINcfg/eNEATL36_AGRIF_newdomain_GEBCO/1_domain_cfg.nc .
-
+ln -fs /scratch/work/brivoalt/MAKE_DOMAINcfg/eNEATL36_AGRIF_emodNET2018_finaldomain_corrected_with_FES2014/domain_cfg.nc .
+ln -fs /scratch/work/brivoalt/MAKE_DOMAINcfg/eNEATL36_AGRIF_emodNET2018_finaldomain_corrected_with_FES2014/1_domain_cfg.nc .
+ln -fs /scratch/work/brivoalt/DATA_eNEATL36/1_bfr_coef.nc .
 ln -fs /scratch/work/brivoalt/DATA_eNEATL36/coordinates.bdy.nc .
 ln -fs /scratch/work/brivoalt/DATA_eNEATL36/shlat2d_eNEATL36.nc shlat2d.nc
 ln -fs /scratch/work/brivoalt/DATA_eNEATL36/CHL_eNEATL36_clim_interp_in_Tyrrh.nc CHL_eNEATL36.nc
 
-ln -fs /scratch/work/brivoalt/DATA_eNEATL36/new_tide_FES2014_grid_U_NEMO4_2.nc tide_FES2014_grid_U.nc
-ln -fs /scratch/work/brivoalt/DATA_eNEATL36/new_tide_FES2014_grid_V_NEMO4_2.nc tide_FES2014_grid_V.nc
+ln -fs /scratch/work/brivoalt/DATA_eNEATL36/new_tide_FES2014_grid_U_bathy_Karen_NEMO4_2.nc tide_FES2014_grid_U.nc
+ln -fs /scratch/work/brivoalt/DATA_eNEATL36/new_tide_FES2014_grid_V_bathy_Karen_NEMO4_2.nc tide_FES2014_grid_V.nc
 ln -fs /scratch/work/brivoalt/DATA_eNEATL36/tide_FES2014_grid_T_NEMO4_2.nc tide_FES2014_grid_T.nc
 
 # RESTART (2017/08/30)
-ln -fs /scratch/work/brivoalt/FORCING_eNEATL36/restart_from_PSY4QV3R1_20170823_drown.nc restart_oce.nc
-
+ln -fs /scratch/work/brivoalt/FORCING_eNEATL36/restart_from_PSY4QV3R1_20170104_drown.nc restart_oce.nc
+#ln -fs /scratch/work/brivoalt/FORCING_eNEATL36/restart_from_PSY4QV3R1_20170104_drown_zoom.nc 1_restart_oce.nc
+ln -fs /scratch/work/brivoalt/FORCING_eNEATL36/restart_from_PSY4QV3R1_20170104_drown_zoomdis.nc 1_restart_oce.nc 
 #~~~~~~ ATMO, BDY & RNF
 ln -fs /scratch/work/brivoalt/FORCING_eNEATL36/RUNOFF/rnf_forcing rnf_forcing
 ln -fs /scratch/work/brivoalt/FORCING_eNEATL36/ATMO/GAUSS1280 ecmwf_forcing
 ln -fs /scratch/work/brivoalt/FORCING_eNEATL36/BDY bdy_forcing
-ln -fs /scratch/work/brivoalt/DATA_eNEATL36/NEW_RNFS/runoff_eNEATL36_with_BDY_y2017_extrap_on_newdomaincfg.nc runoff_2D_MOTHER_y2017.nc
-ln -fs /scratch/work/brivoalt/DATA_eNEATL36/NEW_RNFS/1_runoff_eNEATL36_with_BDY_y2017_extrap_on_newdomaincfg.nc 1_runoff_2D_AGRIF_y2017.nc
+ln -fs /scratch/work/brivoalt/FORCING_eNEATL36/RUNOFF/runoff_eNEATL36_CLIM_and_rivers_y2017_emodNET2018_finaldomain_corrected_with_FES2014.nc runoff_2D_MOTHER_y2017.nc
+ln -fs /scratch/work/brivoalt/FORCING_eNEATL36/RUNOFF/1_runoff_eNEATL36_CLIM_and_rivers_y2017_emodNET2018_finaldomain_corrected_with_FES2014.nc 1_runoff_2D_AGRIF_y2017.nc
+ln -fs /scratch/work/brivoalt/FORCING_eNEATL36/RUNOFF/runoff_eNEATL36_CLIM_and_rivers_y2018_emodNET2018_finaldomain_corrected_with_FES2014.nc runoff_2D_MOTHER_y2018.nc
+ln -fs /scratch/work/brivoalt/FORCING_eNEATL36/RUNOFF/1_runoff_eNEATL36_CLIM_and_rivers_y2018_emodNET2018_finaldomain_corrected_with_FES2014.nc 1_runoff_2D_AGRIF_y2018.nc
+
 # -------------------------------------------------------
 # simulation
 # -------------------------------------------------------
@@ -212,6 +216,15 @@ if [ $(($NLASTSEG)) -gt 1 ]; then
     echo "NSEG > 1 ; restarting from restart"
     restart=$(ls ${CONFIGNM}_*rest* | sort -V | tail -n 1)
     restart_1=$(ls 1_${CONFIGNM_1}*rest* | sort -V | tail -n 1)
+    RESTART_OCE_END=$( ls ${CONFIGNM}_*${NITEND}*rest* )
+    if [ $restart = $RESTART_OCE_END ] ;
+    then
+       echo "RUN OK"
+    else
+       echo "iHERE WAS A PROBLEM WITH THE RUN"
+       exit
+    fi
+
     echo "the new restarts are : " $restart $restart_1
     TMP=${restart%_restart_oce.nc}
     TS_RST=${TMP#${CONFIGNM}_}
@@ -249,11 +262,13 @@ if [ $(($NLASTSEG)) -gt 1 ]; then
             -e "s%DT_NEMO_1_NM%`echo ${DT_NEMO_1}`%" \
             -e "s%NIT00_NM%`echo ${NIT00}`%" \
             -e "s%NIT00_1_NM%`echo ${NIT00_1}`%" \
+            -e "s%gridlist_NM%`echo ${gridlist}`%" \
             -e "s%CONFIGNM_NM%`echo ${CONFIGNM}`%" \
             -e "s%CONFIGNM_1_NM%`echo ${CONFIGNM_1}`%" \
             -e "s%RATIO_TS_AGRIF_NM%`echo ${RATIO_TS_AGRIF}`%" \
             -e "s%NIT00_1_NM%`echo ${NIT00_1}`%" NEMO_4_2_AGRIF_RUN.sub.model >  NEMO_4_2_AGRIF_RUN.sub.$NSEG
     chmod +x NEMO_4_2_AGRIF_RUN.sub.$NSEG 
+
     sbatch NEMO_4_2_AGRIF_RUN.sub.$NSEG
     #./NEMO_4_2_AGRIF_RUN.sub.$NSEG
     

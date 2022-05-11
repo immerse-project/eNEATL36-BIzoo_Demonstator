@@ -3,7 +3,7 @@
 #SBATCH -N 30
 #SBATCH --exclusive
 #SBATCH --no-requeue
-#SBATCH --time=00:10:00
+#SBATCH --time=03:59:00
 #SBATCH --account=cmems
 ######################################################
 #PARAMETERS
@@ -27,6 +27,7 @@ export DT_NEMO=DT_NEMO_NM
 export DT_NEMO_1=DT_NEMO_1_NM
 export NIT00=NIT00_NM
 export NIT00_1=NIT00_1_NM
+export gridlist="gridlist_NM"
 ######################################################
 # Comm/Fabric
 # -----------
@@ -113,7 +114,6 @@ sed -e "s/NIT00/`echo $NIT00`/" \
         -e "s/DSTART/`echo $DSTART`/" \
         -e "s/RAMP_TF/`echo $RAMP_TF`/" \
         -e "s/ln_rstart   = .FALSE./ln_rstart   = .TRUE./" \
-        -e "s/ln_1st_euler = .FALSE./ln_1st_euler = .TRUE./" \
         -e "s/RSTIN/`echo ${RESTART_OCE%.nc}`/" ${NAMCFG} >  namelist_cfg
 
 sed -e "s/NIT00/`echo $NIT00_1`/" \
@@ -121,7 +121,6 @@ sed -e "s/NIT00/`echo $NIT00_1`/" \
         -e "s/DSTART/`echo $DSTART`/" \
         -e "s/RAMP_TF/`echo $RAMP_TF`/" \
         -e "s/ln_rstart   = .FALSE./ln_rstart   = .TRUE./" \
-        -e "s/ln_1st_euler = .FALSE./ln_1st_euler = .TRUE./" \
         -e "s/ln_init_chfrpar = .true./ln_init_chfrpar = .false./" \
         -e "s/RSTIN/`echo ${RESTART_OCE_1%.nc}`/" ${NAMCFG_1} >  1_namelist_cfg
 
@@ -135,7 +134,7 @@ mkdir CDF_RST
 
 mpiexec.hydra -configfile config_file
 
-./NEMO_4_2_AGRIF_RUN_RESTART.sub
+sbatch NEMO_4_2_AGRIF_RUN_RESTART.sub
 
 
 

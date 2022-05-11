@@ -3,20 +3,41 @@
 #SBATCH -N 1
 #SBATCH --exclusive
 #SBATCH --no-requeue
-#SBATCH --time=00:20:00
+#SBATCH --time=06:30:00
 #SBATCH --account=cmems
 ######################################################
-# -------------------------------------------------------
+# ----------------------------------------------------
+#                   REBUILD
+# ----------------------------------------------------
+export SCRIPT_DIR=/home/ext/mr/smer/brivoalt/TOOLS/REBUILD_TOOLS # SRC rebuild & Pre-processing files
+export CLEAN_AFTER_REBUILD=true
+
+echo "REBUILDING GRIDS : "
+echo $gridlist
+
+cp ${SCRIPT_DIR}/rebuild_and_clean_immerse.sh .
+cp ${SCRIPT_DIR}/rebuild_pergrid.sh .
+
+job1=$(sbatch rebuild_and_clean_immerse.sh eNEATL36)
+job2=$(sbatch rebuild_and_clean_immerse.sh 1_AGRIF)
+job1_ID=$(echo $job1 | awk '{print $4}')
+job2_ID=$(echo $job2 | awk '{print $4}')
+
 echo "RESTART PROGRAM"
 
 echo "NSEG = " $NSEG
-
+RESTART_OCE_OLD=$RESTART_OCE
 if [ $(($NSEG)) -lt $(($NLASTSEG)) ]; then
     
     echo "NSEG > 1 ; restarting from restart"
     restart=$(ls ${CONFIGNM}_*rest* | sort -V | tail -n 1)
     restart_1=$(ls 1_${CONFIGNM_1}*rest* | sort -V | tail -n 1)
     echo "the new restarts are : " $restart $restart_1
+    if [ $restart = $RESTART_OCE_OLD ] ;
+    then
+       echo "THERE WAS A PROBLEM WITH THE RUN"
+       exit
+    fi
     TMP=${restart%_restart_oce.nc}
     TS_RST=${TMP#${CONFIGNM}_}
     TS_RST_nbr=$(echo $TS_RST | sed 's/^0*//')
@@ -53,12 +74,13 @@ if [ $(($NSEG)) -lt $(($NLASTSEG)) ]; then
             -e "s%DT_NEMO_1_NM%`echo ${DT_NEMO_1}`%" \
             -e "s%NIT00_NM%`echo ${NIT00}`%" \
             -e "s%NIT00_1_NM%`echo ${NIT00_1}`%" \
+            -e "s%gridlist_NM%`echo ${gridlist}`%" \
             -e "s%CONFIGNM_NM%`echo ${CONFIGNM}`%" \
             -e "s%CONFIGNM_1_NM%`echo ${CONFIGNM_1}`%" \
             -e "s%RATIO_TS_AGRIF_NM%`echo ${RATIO_TS_AGRIF}`%" \
             -e "s%NIT00_1_NM%`echo ${NIT00_1}`%" NEMO_4_2_AGRIF_RUN.sub.model >  NEMO_4_2_AGRIF_RUN.sub.$NSEG
     chmod +x NEMO_4_2_AGRIF_RUN.sub.$NSEG 
-    sbatch NEMO_4_2_AGRIF_RUN.sub.$NSEG
+    jobnemo=$(sbatch --dependency=afterany:$job1_ID:$job2_ID NEMO_4_2_AGRIF_RUN.sub.$NSEG )
     
 fi
 

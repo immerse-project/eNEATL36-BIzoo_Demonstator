@@ -7,7 +7,10 @@
 #SBATCH -p normal256
 #SBATCH -o compile_NEMO_4.out
 
-CONFIG="AMM12 -n eNEATL36_AGRIF"       # ORCA025, NEATL36, ...
+CONFIG="eNEATL36_AGRIF_qco"       # ORCA025, NEATL36, ...
+#CONFIG="eNEATL36_AGRIF_vvl"
+#CONFIG="eNEATL36_AGRIF_vvl_PARENT_EXT_BDY"
+#CONFIG="AGRIF_DEMO_2"
 if [ ${CONFIG} == "empty" ] ; then
    echo "fill CONFIG name !!!!!!"
    exit
@@ -21,7 +24,8 @@ PERL5LIB="/home/ext/mr/smer/soniv/perl5/lib/perl5${PERL5LIB:+:${PERL5LIB}}"; exp
 
 OPTION="12 -k 0"     # "clean" could also been added for example
 
-ARCH="X64_BELENOS_INTEL_IMPI_theo"
+#ARCH="X64_BELENOS_INTEL_IMPI_theo_debug"
+ARCH="X64_BELENOS_INTEL_IMPI_theo_O1"
 
 MODULE_LIST="\
    gcc/9.2.0
@@ -43,4 +47,5 @@ if [ -n "${MODULE_LIST}" ] ; then
 fi
 module_ksh list
 
+./makenemo -r ${CONFIG} -m ${ARCH} -j ${OPTION} clean
 ./makenemo -r ${CONFIG} -m ${ARCH} -j ${OPTION}
