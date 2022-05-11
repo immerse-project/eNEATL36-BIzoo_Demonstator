@@ -1,0 +1,27 @@
+The scripts facilitate the use of NEMO REBUILD tool
+
+
+HOW TO USE 
+
+1 - Change path of the REBUILD_NEMO executable EXE_REBUILD in rebuild_and_clean_immerse.sh
+
+2 - Copy rebuild_and_clean_immerse.sh and rebuild_pergrid.sh in your run directory
+
+3 - To launch the rebuild script :  
+
+sbatch rebuild_and_clean_immerse.sh GRID_NAME_PREFIX
+
+where GRID_NAME_PREFIX is the name of the grid, which is use as prefix for the file names
+
+ex : if your grid name is eNEATL36 over the parent domain and AGRIF over the child domain :
+
+- the NEMO outputs have the form : 
+PARENT : eNEATL36_1?_grid*_????????-????????.nc
+CHILD  : 1_AGRIF_1?_grid*_????????-????????.nc
+
+- Then, do : 
+PARENT : sbatch rebuild_and_clean_immerse.sh eNEATL36
+CHILD : sbatch rebuild_and_clean_immerse.sh 1_AGRIF
+
+Nb : you can change the list of the grids you want to rebuild (ex : 1h_gridT, 1d_gridV etc ...) by modifying the list "gridlist" in rebuild_and_clean_immerse.sh 
+
