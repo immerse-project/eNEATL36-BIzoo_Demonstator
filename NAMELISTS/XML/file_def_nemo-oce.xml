@@ -1,0 +1,138 @@
+<?xml version="1.0"?>
+
+    <!-- 
+         ============================================================================================================
+=                                           output files definition                                        =
+=                                            Define your own files                                         =
+=                                         put the variables you want...                                    =
+============================================================================================================
+    -->
+
+    <file_definition type="multiple_file" name="@expname@_@freq@" sync_freq="1d" min_digits="4">
+      <file_group id="1ts" output_freq="1ts"  output_level="10" enabled=".TRUE."/> <!-- 1 time step files -->
+      <file_group id="1h" output_freq="1h"  split_freq="1d"  output_level="10" enabled=".TRUE."> <!-- 1h files -->
+        <file id="file1" name_suffix="_scalar" >         <!-- scalar -->
+          <field field_ref="masstot"            long_name="sea_water_mass"                                      />
+          <field field_ref="voltot"             long_name="sea_water_volume"                                    />
+          <field field_ref="sshtot"             long_name="global_average_sea_level_change"                     />
+          <field field_ref="sshsteric"          long_name="global_average_steric_sea_level_change"              />
+          <field field_ref="temptot"            long_name="sea_water_potential_temperature"                     />
+          <field field_ref="saltot"             long_name="sea_water_salinity"                                  />
+        </file>
+        <file id="file2" name_suffix="_gridT_NOOBS" description="ocean T grid variables" >
+           <field field_ref="sst"          name="sosstmod"  operation="instant" />
+           <field field_ref="sss"          name="sosssmod"  operation="instant" />
+        </file>
+
+        <file id="file3" name_suffix="_gridT" description="ocean T grid variables" >
+           <field field_ref="sst"          name="sosstmod"  />
+           <field field_ref="sss"          name="sosssmod"  />
+           <field field_ref="ssh"          name="sossheig" />
+        </file>
+        <file id="file20" name_suffix="_gridT_15m" description="ocean T grid variables" >
+           <field field_ref="toce_15m"          name="toce_15m"  />
+           <field field_ref="soce_15m"          name="soce_15m"  />
+        </file>
+
+        <file id="file4" name_suffix="_gridU" description="ocean U grid variables" >
+           <field field_ref="ssu"          name="sozocrtx"  />
+        </file>
+        <file id="file21" name_suffix="_gridU_15m" description="ocean U grid variables" >
+           <field field_ref="uoce_15m"          name="uoce_15m"  />
+        </file>
+
+        <file id="file5" name_suffix="_gridV" description="ocean V grid variables" >
+           <field field_ref="ssv"          name="somecrty"  />
+        </file>
+        <file id="file22" name_suffix="_gridV_15m" description="ocean V grid variables" >
+           <field field_ref="voce_15m"          name="voce_15m"  />
+        </file>
+
+        <file id="file6" name_suffix="_grid2D_NOOBS" description="Surface variables" >
+           <field field_ref="ssh"          name="sossheig" operation="average" />
+           <field field_ref="botpres2D"    name="sodynhei" operation="average" />
+           <field field_ref="sshdyn"       name="sshdyn"   operation="average" />
+           <field field_ref="ssh_ib"       name="ssh_ib"   operation="average" />
+        </file>
+      </file_group>
+      <file_group id="2h" output_freq="2h"  output_level="10" enabled=".TRUE."/> <!-- 2h files -->
+      <file_group id="3h"  output_freq="3h" split_freq="1d"  output_level="10" enabled=".TRUE."> <!-- 3h files -->
+        <file id="file7" name_suffix="_gridT_NOOBS" description="ocean T grid variables" >
+          <field field_ref="toce"      name="votemper"  operation="instant" />
+        </file>
+        <file id="file8" name_suffix="_gridS_NOOBS" description="ocean T grid variables" >
+          <field field_ref="soce"      name="vosaline"  operation="instant" />
+        </file>
+      </file_group>
+      <file_group id="4h" output_freq="4h"  output_level="10" enabled=".TRUE."/> <!-- 4h files -->
+      <file_group id="6h" output_freq="6h"  output_level="10" enabled=".TRUE."/> <!-- 6h files -->
+      <file_group id="1d" output_freq="1d"  split_freq="1d"  output_level="10" enabled=".TRUE."> <!-- 1d files -->
+        <file id="file9" name_suffix="_scalar" >         <!-- scalar -->
+          <field field_ref="masstot"            long_name="sea_water_mass"                                      />
+          <field field_ref="voltot"             long_name="sea_water_volume"                                    />
+          <field field_ref="sshtot"             long_name="global_average_sea_level_change"                     />
+          <field field_ref="sshsteric"          long_name="global_average_steric_sea_level_change"              />
+          <field field_ref="temptot"            long_name="sea_water_potential_temperature"                     />
+          <field field_ref="saltot"             long_name="sea_water_salinity"                                  />
+        </file>
+        <file id="file10" name_suffix="_gridT25h" description="ocean T grid variables" >
+           <field field_ref="temper25h"    name="votemper"  operation="instant" enabled=".TRUE."/>
+        </file>
+        <file id="file11" name_suffix="_gridS25h" description="ocean T grid variables" >
+           <field field_ref="salin25h"     name="vosaline"  operation="instant" enabled=".TRUE."/>
+        </file>
+        <file id="file23" name_suffix="_runoffs" description="ocean T grid variables" >
+           <field field_ref="runoffs"       name="runoffs"  />
+           <field field_ref="runoffs"       name="runoffs_instant"  operation="instant" enabled=".TRUE."/>
+        </file>
+
+        <file id="file12" name_suffix="_grid2D" description="ocean T grid variables" >
+           <field field_ref="mldkz5"       name="somxlavt"  />
+           <field field_ref="mld_dt02"     name="somxlt02"  />
+           <field field_ref="mldr10_1"     name="somxl010"  />
+           <field field_ref="qt"           name="sohefldo"  />
+           <field field_ref="qsr"          name="soceshwf"  />
+           <field field_ref="empmr"        name="sowaflup"  />
+           <field field_ref="wspd"         name="sowinmod"  />
+           <field field_ref="precip"       name="sowaprec"  />
+           <field field_ref="sst"          name="sosstmod"  />
+           <field field_ref="taum"         name="sotausrf"  />
+           <field field_ref="ssh_ib"       name="ssh_ib"    />
+           <field field_ref="botpres"      name="botpres"   />
+           <field field_ref="sshdyn"       name="sshdyn"    />
+        </file>
+        <file id="file13" name_suffix="_grid2D25h" description="ocean T grid variables" >
+           <field field_ref="ssh25h"       name="sossheig"  operation="instant" enabled=".TRUE."/>
+        </file>
+
+        <file id="file14" name_suffix="_gridU_2D" description="ocean U grid variables" >
+           <field field_ref="utau"         name="sozotaux"  />
+        </file>
+        <file id="file15" name_suffix="_gridU25h" description="ocean U grid variables" >
+           <field field_ref="vozocrtx25h"  name="vozocrtx"  operation="instant" enabled=".TRUE."/>
+        </file>
+
+        <file id="file16" name_suffix="_gridV_2D" description="ocean V grid variables" >
+           <field field_ref="vtau"         name="sometauy"  />
+        </file>
+        <file id="file17" name_suffix="_gridV25h" description="ocean V grid variables" >
+           <field field_ref="vomecrty25h"  name="vomecrty"  operation="instant" enabled=".TRUE."/>
+        </file>
+
+        <file id="file18" name_suffix="_gridW25h" description="ocean W grid variables" >
+          <field field_ref="vovecrtz25h"   name="vovecrtz"  operation="instant" enabled=".TRUE."/>
+        </file>
+      </file_group>
+      <file_group id="3d" output_freq="3d"  split_freq="3d"  output_level="10" enabled=".TRUE."/> <!-- 3d files -->
+      <file_group id="5d" output_freq="5d"  output_level="10" enabled=".TRUE."/>  <!-- 5d files -->
+      <file_group id="7d" output_freq="7d"  output_level="10" enabled=".TRUE."/>  <!-- 7d files -->
+      <file_group id="1m" output_freq="1mo" split_freq="1y" output_level="10" enabled=".FALSE."/> <!-- real monthly files -->
+      <file_group id="2m" output_freq="2mo" output_level="10" enabled=".TRUE."/> <!-- real 2m files -->
+      <file_group id="3m" output_freq="3mo" output_level="10" enabled=".TRUE."/> <!-- real 3m files -->
+      <file_group id="4m" output_freq="4mo" output_level="10" enabled=".TRUE."/> <!-- real 4m files -->
+      <file_group id="6m" output_freq="6mo" output_level="10" enabled=".TRUE."/> <!-- real 6m files -->
+      <file_group id="1y"  output_freq="1y" split_freq="1y" output_level="10" enabled=".FALSE."/> <!-- real yearly files -->
+      <file_group id="2y"  output_freq="2y" output_level="10" enabled=".TRUE."/> <!-- real 2y files -->
+      <file_group id="5y"  output_freq="5y" output_level="10" enabled=".TRUE."/> <!-- real 5y files -->
+      <file_group id="10y" output_freq="10y" output_level="10" enabled=".TRUE."/> <!-- real 10y files -->
+   </file_definition>
