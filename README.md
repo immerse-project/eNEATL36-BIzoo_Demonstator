@@ -1,4 +1,4 @@
-# eNEATL36-AGRIF_Demonstator
+# eNEATL36-BIzoo (BIscay Zoom) Demonstator
 
 This page describe the way to build a global 1/36° regional configuration other the North-East Atlantic (eNEATL36) with an embedded 1/108° AGRIF zoom.
 
