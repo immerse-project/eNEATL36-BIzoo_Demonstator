@@ -223,8 +223,8 @@
    !___________!_________________________!___________________!___________!_____________!________!___________!______________________________________!__________!_______________!
    !           !  file name              ! frequency (hours) ! variable  ! time interp.!  clim  ! 'yearly'/ !       weights filename               ! rotation ! land/sea mask !
    !           !                         !  (if <0  months)  !   name    !   (logical) !  (T/F) ! 'monthly' !                                      ! pairing  !    filename   !
-   sn_wndi     = 'ECMWF_BULKU10M_GAUSS1280'    ,      1.     , 'sowinu10', .true.   , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_LARGE_bicub' , ''   , ''
-   sn_wndj     = 'ECMWF_BULKV10M_GAUSS1280'    ,      1.     , 'sowinv10', .true.   , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_LARGE_bicub' , ''   , ''
+   sn_wndi     = 'ECMWF_BULKU10M_GAUSS1280'    ,      1.     , 'sowinu10', .true.   , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_LARGE_bicub' , 'U10'   , ''
+   sn_wndj     = 'ECMWF_BULKV10M_GAUSS1280'    ,      1.     , 'sowinv10', .true.   , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_LARGE_bicub' , 'V10'   , ''
    sn_qsr      = 'ECMWF_FLUXSSRD_GAUSS1280'    ,      1.     , 'sosudosw', .true.  , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_LARGE_bilin' ,  ''  , ''
    sn_qlw      = 'ECMWF_FLUXSTRD_GAUSS1280'    ,      1.     , 'sosudolw', .true.  , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_LARGE_bilin' ,  ''  , ''
    sn_tair     = 'ECMWF_BULKTAIR_GAUSS1280'    ,      1.     , 'sotemair', .true.   , .FALSE. , 'daily' , 'weights_IFS_2_eNEATL36_AGRIF_LARGE_bilin' ,  ''  , ''
