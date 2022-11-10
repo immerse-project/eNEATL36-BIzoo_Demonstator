@@ -485,6 +485,8 @@ def move_runoffs(rnf_2Dt,rnf_point,mask,verb):
 
 ######################################################################################################################
 def find_nearest_coast_point_ij(i,j,mask,rnf_data,nseuil):
+    # This function is used in move_runoffs_ij 
+    # It finds the nearest coast point along ij
     out=[]
     n=1
     var=0
@@ -585,7 +587,8 @@ def move_runoffs_ij(rnf_2D,rnf_point,mask,verb):
                       
             if npoints == 0: # No available points nearby without an already existing runoff value => avoid
                 #rnf_2D_new[rnf_point[0,n],rnf_point[1,n]] = 0.  
-                print("WARNING : point at i, j = ", rnf_point[0,n],rnf_point[1,n] ,                                    " is way too far from coast => ignore")
+                print("WARNING : could not find a coast point at a distance < ",nseuil," for point at i, j = ", rnf_point[0,n],rnf_point[1,n] \
+                       ,", This point might be in a corner (or if not, there is a bug)") 
             if npoints == 1: 
                 rnf_2D_new[:,int(ind[0]),int(ind[1])] = rnf_2D_new[:,int(ind[0]),int(ind[1])]                        + rnf_2D_new[:,rnf_point[0,n],rnf_point[1,n]]
                 rnf_2D_new[:,rnf_point[0,n],rnf_point[1,n]] = 0.   
@@ -624,7 +627,7 @@ e1e2t= inp_domain_cfg.e1t.squeeze().values * inp_domain_cfg.e2t.squeeze().values
 # Open variables
 mask_inp_tmp =  inp_domain_cfg.top_level.squeeze() #[:,600:700]
 mask_inp = np.where(mask_inp_tmp > 0., 1., 0.)
-rnf_2Dt=inp_rnf_2D.runoffs_instant.squeeze()*1000000 #* e1e2t[:,:] * 1000000#[:,:,600:700]
+rnf_2Dt=inp_rnf_2D.runoffs_instant.squeeze() *  e1e2t[:,:] #[:,:,600:700]
 
 rnf_2Dt_new=np.zeros(rnf_2Dt.shape)
 rnf_2Dt_new2=np.zeros(rnf_2Dt.shape)
@@ -641,15 +644,7 @@ print("STEP 2 : cosmetics")
 rnf_point = np.array(np.where(rnf_2Dt_new[0,:,:]>0)) # Assuming runoffs does not move
     
 rnf_2Dt_new2[:,:,:]=move_runoffs_ij(rnf_2Dt_new[:,:,:],rnf_point,mask_inp,verb) # Just to check
-rnf_2Dt_new2 = rnf_2Dt_new2  #/ e1e2t[:,:]
-
-## Date variables ----------------------------------------------------------------------------------------
-#dstart_year= str(year) + "-01-01" # 1st day of the year
-#dend_year= str(year) + "-12-31" # last day of the year
-#
-#dstart_clim_monthly = str(year) + "-01-15" # for 12 month clim
-#dend_clim_monthly = str(year) + "-12-15" # for 12 month clim
-#dstart_minus_1_month = str(year-1) + "-12-01" # used for conversion from monthly to daily clim data
+rnf_2Dt_new2 = rnf_2Dt_new2  / e1e2t[:,:]
 
 ############################ Save in a Netcdf ###################################
 rnf_2Dt_daily_new_da = xr.DataArray(
@@ -663,7 +658,7 @@ rnf_2Dt_daily_new_da.to_netcdf(outfile, mode="w")
 
 print("Computing sum (on first time_step)")
 print("original file")
-print(np.nansum(inp_rnf_2D.runoffs_instant.squeeze()[0,:,:]  * 1000000)) # *e1e2t))
+print(np.nansum(inp_rnf_2D.runoffs_instant.squeeze()[0,:,:]   *e1e2t))
 print(np.nansum(rnf_2Dt[0,:,:]))
 print("After Step 1")
 print(np.nansum(rnf_2Dt_new[0,:,:] ) )
