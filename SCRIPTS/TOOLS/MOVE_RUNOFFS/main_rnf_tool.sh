@@ -8,7 +8,7 @@
 
 DO_MOTHER=true
 DO_CHILD=false
-IS_RIVERS=false
+IS_NOT_RIVERS=false
 DOMCFG_IN=/scratch/work/brivoalt/MAKE_DOMAINcfg/eNEATL36_AGRIF_emodNET2018_finaldomain_corrected_with_FES2014/domain_cfg_init.nc
 DOMCFG_IN_ZOOM=/scratch/work/brivoalt/MAKE_DOMAINcfg/eNEATL36_AGRIF_emodNET2018_finaldomain_corrected_with_FES2014/1_domain_cfg.nc
 
@@ -29,10 +29,11 @@ then
 echo "DONE"
 fi
 
-
+# Note: here we treat differently the rivers and the climatology. But they can also be treated together 
+# (It was more convenient to have the rivers in a separate file to check if everything was OK)
 if $DO_CHILD
 then
-    if $IS_RIVERS
+    if $IS_NOT_RIVERS
     then
         sed -e "s%DOMCFG_IN_ZOOM%`echo $DOMCFG_IN_ZOOM`%g" \
             -e "s%DOMCFG_IN%`echo $DOMCFG_IN`%g" \

@@ -13,7 +13,8 @@ from shutil import copyfile
 #######################################################################################
 
 
-def find_nearest_coast_point(i,j,mask,nseuil):
+def find_nearest_coast_point_ij(i,j,mask,nseuil):
+    # Same function as in extrap_near_coasts.py
     out_i=[]
     out_j=[]
     n=1
@@ -50,6 +51,14 @@ def find_nearest_coast_point(i,j,mask,nseuil):
 def place_runoffs_on_zoom(rnf_2Dt_mother_on_zoom,rnf_2Dt_zoom_inout,mask_zoom,e1e2t_zoom,rnf_point_mother, \
                           Nfactor,coordcheck=False,nav_lat_zoom=None,nav_lon_zoom=None, \
                           nav_lat_mother=None,nav_lon_mother=None):
+    # This function has two purpose:
+    # 	- First, for a given runoff point at i_mother, j_mother on the parent grid , 
+    #     finds the corresponding i_zoom, j_zoom on the child grid
+    #   - Then:
+    #   	=> if move_to_coast = False, dispatch the runoffs on the Nfactor x Nfactor grid points area bellow the parent point
+    #           => if true, => Finds the nearest coast point (from i_zoom, j_zoom) and dispatch the runoff over the Nfactor x Nfactor grid points area, 
+    #              while accounting for the land-sea mask of the nest.
+    move_to_coast=False # Lay off the runoffs over the coast (T) or not (F)
     i_mother = rnf_point_mother[0,:]
     j_mother = rnf_point_mother[1,:]
     i_zoom = Nfactor * (i_mother) + 2 # +2 in order to be at f point and avoid rim point (+1 +1)
@@ -61,6 +70,7 @@ def place_runoffs_on_zoom(rnf_2Dt_mother_on_zoom,rnf_2Dt_zoom_inout,mask_zoom,e1
 
     for n in range(len(i_mother)):
     ############### TO TEST INDEXATION ---------------------------------------------------------------------
+        if coordcheck: print('print coords')
         if coordcheck:   print(nav_lat_mother[int(i_mother[n]),int(j_mother[n])].values, \
                                nav_lat_zoom[int(i_zoom[n]),int(j_zoom[n])].values)
         if coordcheck:      print(nav_lon_mother[int(i_mother[n]),int(j_mother[n])].values,\
@@ -68,34 +78,37 @@ def place_runoffs_on_zoom(rnf_2Dt_mother_on_zoom,rnf_2Dt_zoom_inout,mask_zoom,e1
     for t in range(len(rnf_2Dt_mother_on_zoom[:,0,0])):
         print("processing time step : ", t)
         for n in range(len(i_mother)):
-            #ind_i , ind_j = find_nearest_coast_point(i_zoom[n],j_zoom[n],mask_zoom_inv,nseuil)
-         #------------------------------------------------------------------------------------------------------
-            ndist= int((Nfactor -1)/2) # (Number of points in mesh along i or j direction / 2) - the central point
-            sum_e1e2t_zoom=np.nansum(e1e2t_zoom[i_zoom[n]-ndist:i_zoom[n]+ndist+1,j_zoom[n]-ndist:j_zoom[n]+ndist+1] \
-            * mask_zoom[i_zoom[n]-ndist:i_zoom[n]+ndist+1,j_zoom[n]-ndist:j_zoom[n]+ndist+1])
-            rnf_2Dt_zoom[t,i_zoom[n]-ndist:i_zoom[n]+ndist+1,j_zoom[n]-ndist:j_zoom[n]+ndist+1]=         \
-            (rnf_2Dt_mother_on_zoom[t,int(i_mother[n]),int(j_mother[n])]/                                \
-            sum_e1e2t_zoom) * e1e2t_zoom[i_zoom[n]-ndist:i_zoom[n]+ndist+1,j_zoom[n]-ndist:j_zoom[n]+ndist+1]
-
+            if move_to_coast:
+                ind_i , ind_j = find_nearest_coast_point_ij(i_zoom[n],j_zoom[n],mask_zoom_inv,nseuil)
+            else:
+                ndist= int((Nfactor -1)/2) # (Number of points in mesh along i or j direction / 2) - the central point
+                sum_e1e2t_zoom=np.nansum(e1e2t_zoom[i_zoom[n]-ndist:i_zoom[n]+ndist+1,j_zoom[n]-ndist:j_zoom[n]+ndist+1] \
+                * mask_zoom[i_zoom[n]-ndist:i_zoom[n]+ndist+1,j_zoom[n]-ndist:j_zoom[n]+ndist+1])
+                #print(sum_e1e2t_zoom) 
+                rnf_2Dt_zoom[t,i_zoom[n]-ndist:i_zoom[n]+ndist+1,j_zoom[n]-ndist:j_zoom[n]+ndist+1]=         \
+                (rnf_2Dt_mother_on_zoom[t,int(i_mother[n]),int(j_mother[n])]/                                \
+                sum_e1e2t_zoom) * e1e2t_zoom[i_zoom[n]-ndist:i_zoom[n]+ndist+1,j_zoom[n]-ndist:j_zoom[n]+ndist+1]
+   
         #----------------------------------------------------------------------------------------------------
-#            sum_e1e2t_zoom=0
-#            for n2 in range(len(ind_i)): 
-#                ind_i_tmp=int(ind_i[n2])
-#                ind_j_tmp=int(ind_j[n2])
-#                sum_e1e2t_zoom=sum_e1e2t_zoom +\
-#                               np.nansum(e1e2t_zoom[ind_i_tmp-ndist:ind_i_tmp+ndist+1,ind_j_tmp-ndist:ind_j_tmp+ndist+1]\
-#                               * mask_zoom[ind_i_tmp-ndist:ind_i_tmp+ndist+1,ind_j_tmp-ndist:ind_j_tmp+ndist+1])
-#
-#            tmp=0
-#            for n2 in range(len(ind_i)):
-#                ind_i_tmp=int(ind_i[n2])
-#                ind_j_tmp=int(ind_j[n2])
-#                rnf_2Dt_zoom[t,ind_i_tmp-ndist:ind_i_tmp+ndist+1,ind_j_tmp-ndist:ind_j_tmp+ndist+1]= \
-#                             rnf_2Dt_zoom[t,ind_i_tmp-ndist:ind_i_tmp+ndist+1,ind_j_tmp-ndist:ind_j_tmp+ndist+1] \
-#                             + rnf_2Dt_mother_on_zoom[t,int(i_mother[n]),int(j_mother[n])] \
-#                             * (e1e2t_zoom[ind_i_tmp-ndist:ind_i_tmp+ndist+1,ind_j_tmp-ndist:ind_j_tmp+ndist+1] \
-#	                     * mask_zoom[ind_i_tmp-ndist:ind_i_tmp+ndist+1,ind_j_tmp-ndist:ind_j_tmp+ndist+1])  \
-#                             / sum_e1e2t_zoom
+            if move_to_coast:
+                sum_e1e2t_zoom=0
+                for n2 in range(len(ind_i)): 
+                    ind_i_tmp=int(ind_i[n2])
+                    ind_j_tmp=int(ind_j[n2])
+                    sum_e1e2t_zoom=sum_e1e2t_zoom +\
+                                   np.nansum(e1e2t_zoom[ind_i_tmp-ndist:ind_i_tmp+ndist+1,ind_j_tmp-ndist:ind_j_tmp+ndist+1]\
+                                   * mask_zoom[ind_i_tmp-ndist:ind_i_tmp+ndist+1,ind_j_tmp-ndist:ind_j_tmp+ndist+1])
+
+                tmp=0
+                for n2 in range(len(ind_i)):
+                    ind_i_tmp=int(ind_i[n2])
+                    ind_j_tmp=int(ind_j[n2])
+                    rnf_2Dt_zoom[t,ind_i_tmp-ndist:ind_i_tmp+ndist+1,ind_j_tmp-ndist:ind_j_tmp+ndist+1]= \
+                                 rnf_2Dt_zoom[t,ind_i_tmp-ndist:ind_i_tmp+ndist+1,ind_j_tmp-ndist:ind_j_tmp+ndist+1] \
+                                 + rnf_2Dt_mother_on_zoom[t,int(i_mother[n]),int(j_mother[n])] \
+                                 * (e1e2t_zoom[ind_i_tmp-ndist:ind_i_tmp+ndist+1,ind_j_tmp-ndist:ind_j_tmp+ndist+1] \
+	                         * mask_zoom[ind_i_tmp-ndist:ind_i_tmp+ndist+1,ind_j_tmp-ndist:ind_j_tmp+ndist+1])  \
+                                 / sum_e1e2t_zoom
     return rnf_2Dt_zoom
 
 
@@ -117,7 +130,7 @@ xmax_zoom=1073
 ymin_zoom=350
 ymax_zoom=1245
 Nfactor=3 #zoom refinement factor
-coordcheck=True
+coordcheck=False # True : Print coordinates of the parent and of the corresponding nest point => They should be the same
 
 # Open variables
 # mask_inp =  inp_domain_cfg.top_level.squeeze()
@@ -147,13 +160,14 @@ nav_lon_zoom=out_domain_cfg_zoom.glamt.squeeze()[:,:]
 
 rnf_2Dt_zoom=np.zeros((int(len(rnf_2Dt_mother[:,0,0])),int(len(mask_zoom[:,0])),int(len(mask_zoom[0,:]))))
 rnf_point_mother = np.array(np.where(rnf_2Dt_mother_on_zoom[0,:,:]>0)) # assuming runoffs does not move
-# rnf_2Dt_zoom[:,:,:] = place_runoffs_on_zoom(rnf_2Dt_mother_on_zoom[:,:,:],rnf_2Dt_zoom[:,:,:]\
-#                                                       ,mask_zoom[:,:],e1e2t_zoom[:,:],      \
-#                                                       rnf_point_mother, True,               \
-#                                                       nav_lat_zoom,nav_lon_zoom,            \
-#                                                       nav_lat_mother, nav_lon_mother)
-
-rnf_2Dt_zoom[:,:,:] = place_runoffs_on_zoom(rnf_2Dt_mother_on_zoom[:,:,:],rnf_2Dt_zoom[:,:,:] \
+if coordcheck:
+    rnf_2Dt_zoom[:,:,:] = place_runoffs_on_zoom(rnf_2Dt_mother_on_zoom[:,:,:],rnf_2Dt_zoom[:,:,:]\
+                                                       ,mask_zoom[:,:],e1e2t_zoom[:,:],      \
+                                                       rnf_point_mother,Nfactor, True,               \
+                                                       nav_lat_zoom,nav_lon_zoom,            \
+                                                       nav_lat_mother, nav_lon_mother)
+else:
+    rnf_2Dt_zoom[:,:,:] = place_runoffs_on_zoom(rnf_2Dt_mother_on_zoom[:,:,:],rnf_2Dt_zoom[:,:,:] \
                                            ,mask_zoom[:,:],e1e2t_zoom[:,:],                       \
                                            rnf_point_mother, Nfactor)
 rnf_2Dt_zoom = rnf_2Dt_zoom / e1e2t_zoom

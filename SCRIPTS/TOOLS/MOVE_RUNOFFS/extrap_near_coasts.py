@@ -159,114 +159,71 @@ def check_if_surrounded_by_sea(i,j,mask,ndist,nseuil):
 
 
 ######################################################################################################################
-def find_nearest_sea_point(i,j,mask,ndist,rnf_data):
+def find_nearest_sea_point(i,j,mask,ndist):
     # Function to find the nearest sea point of point at i,j
     # This function is called when a runoff point is found on a land point, and when there is at least one sea point in ndist perimeter
     # It returns preferentially the indexes of (in the following order):
-    # - CASE 1 : the indexes of empty sea points (i.e: with runoff=0 and mask = 0, so a sea point with no runoff data already present at this point)
-    #   along i,j direction only (diagonal points are ignored)
-    # - CASE 2 (if CASE 1 does not exists): the indexes of non-empty sea points (i.e : with runoff>0 and mask = 0) along i, j direction only
-    # - CASE 3 (if CASE 1 & 2 does not exists) : the indexes of empty sea points along all directions (diagonal included)
-    # - CASE 4 (if CASE 1, 2 & 3 does not exists) : the indexes of non-empty sea points along all directions (diagonal included)
-  
+    # - CASE 1: the sea points in ndist perimeter along i and j direction
+    # - CASE 2: is CASE 1 does not exists, the sea points in ndist perimeter along the diagonals  
+    # First, select the mask around a ndist perimeter of the point at (i,j)
 
-    i_ind_new=[]
-    j_ind_new=[]
-    
-# First, select the runoff and the mask around a ndist perimeter of the point at (i,j)
-# and create a 2D array arr = mask + runoff over this area (so that arr=0 when there is no runoff data)
     if (i > (ndist-1)):
         if (j > (ndist-1)):
-            arr_mr = rnf_data[i-ndist:i+ndist+1,j-ndist:j+ndist+1] + mask[i-ndist:i+ndist+1,j-ndist:j+ndist+1]
+            arr_m = mask[i-ndist:i+ndist+1,j-ndist:j+ndist+1]
         else:
-            arr_mr = rnf_data[i-ndist:i+ndist+1,j:j+ndist+1] + mask[i-ndist:i+ndist+1,j:j+ndist+1]
+            arr_m = mask[i-ndist:i+ndist+1,j:j+ndist+1]
     else:
         if (j > (ndist-1)):
-            arr_mr = rnf_data[i:i+ndist+1,j-ndist:j+ndist+1] + mask[i:i+ndist+1,j-ndist:j+ndist+1]
+            arr_m = mask[i:i+ndist+1,j-ndist:j+ndist+1]
         else:
-            arr_mr = rnf_data[i:i+ndist+1,j:j+ndist+1] + mask[i:i+ndist+1,j:j+ndist+1]
+            arr_m = mask[i:i+ndist+1,j:j+ndist+1]
+    
+    arr_m_ij=np.ones(arr_m.shape)
+    arr_m_ij[ndist,:]=arr_m[ndist,:]
+    arr_m_ij[:,ndist]=arr_m[:,ndist]
 
-    # Here, we check the available points 
-    # check along i and j axis only
-    # Create arr_mr_ij 2D arr_mray similar to arr_mr, but with diagonal points masked
-    arr_mr_ij=np.ones(arr_mr.shape)
-    arr_mr_ij[ndist,:]=arr_mr[ndist,:] # select only points at the middle of the arr_mray (along y axis)
-    arr_mr_ij[:,ndist]=arr_mr[:,ndist] # select only points at the middle of the arr_mray (along x axis) 
-
-    # Create the list of indexes of empty points in i,j directions only (diagonal points are masked) : "available_points_ij" 
-    available_points_ij=np.argwhere(arr_mr_ij[:,:]==0) - ndist
-    available_points_ij[:,0]=available_points_ij[:,0] + i 
-    available_points_ij[:,1]=available_points_ij[:,1] + j 
-
-    # ---------------------------------------------------------
-    # First check => if there is an empty sea point along i, j directions only 
-    if 0 in arr_mr_ij :  # CASE 1 : empty sea point along i, j directions only
-        available_points_ij=np.argwhere(arr_mr_ij[:,:]==0) - ndist
-        available_points_ij[:,0]=available_points_ij[:,0] + i
-        available_points_ij[:,1]=available_points_ij[:,1] + j
-        return available_points_ij
-        del(available_points_ij)
-    else: # CASE 2, 3, 4 or ERROR
-        if (i > (ndist-1)):
-            if (j > (ndist-1)):
-                arr_m = mask[i-ndist:i+ndist+1,j-ndist:j+ndist+1]
-            else:
-                arr_m = mask[i-ndist:i+ndist+1,j:j+ndist+1]
-        else:
-            if (j > (ndist-1)):
-                arr_m = mask[i:i+ndist+1,j-ndist:j+ndist+1]
-            else:
-                arr_m = mask[i:i+ndist+1,j:j+ndist+1]
-        
-        arr_m_ij=np.ones(arr_m.shape)
-        arr_m_ij[ndist,:]=arr_m[ndist,:]
-        arr_m_ij[:,ndist]=arr_m[:,ndist]
-        available_points_ij=np.argwhere(arr_m_ij[:,:]==0)  - ndist
-        available_points_ij[:,0]=available_points_ij[:,0] + i
-        available_points_ij[:,1]=available_points_ij[:,1] + j
-
-        # Second check => if there is a non-empty sea point along i, j directions only 
-        if 0 in arr_m_ij : # CASE 2
-            return available_points_ij
-            del(available_points_ij)
-        # Third check => if there is an empty sea point along all directions only 
-        elif 0 in arr_mr : # CASE 3
-            available_points_all=np.argwhere(arr_mr[:,:]==0)  - ndist
-            available_points_all[:,0]=available_points_all[:,0] + i
-            available_points_all[:,1]=available_points_all[:,1] + j
-            return available_points_all
-            del(available_points_all, available_points_ij)
-       # Last check => if there is a non-empty sea point along all directions only
-        elif 0 in arr_m : #CASE 4 
-            available_points_all=np.argwhere(arr_m[:,:]==0)  - ndist
-            available_points_all[:,0]=available_points_all[:,0] + i
-            available_points_all[:,1]=available_points_all[:,1] + j
-            return available_points_all
-            del(available_points_all, available_points_ij)
-        else:
-            print("ERROR")
-            print(arr_m)
-
+    # First check => if there is a sea point along i, j directions only 
+    if 0 in arr_m_ij : # CASE 1
+       available_points=np.argwhere(arr_m_ij[:,:]==0)  - ndist
+       available_points[:,0]=available_points[:,0] + i
+       available_points[:,1]=available_points[:,1] + j
+    # Second check => if there is a sea point along all directions  
+    elif 0 in arr_m : #CASE 2 
+        available_points=np.argwhere(arr_m[:,:]==0)  - ndist
+        available_points[:,0]=available_points[:,0] + i
+        available_points[:,1]=available_points[:,1] + j
+    else:
+        print("ERROR")
+        print(arr_m)
+    return available_points
 
 ######################################################################################################################
-def get_nearest_coast_point(i,j,ndist,nearests_sea_points):
-    nearests_coast_point = np.zeros(nearests_sea_points.shape)
+def get_nearest_coast_point(i,j,ndist,nearests_land_points):
+    # Function to return the nearest coast point of a runoff point at i,j, from a list of nearest sea points nearests_land_points found precendently
+    # => For a land point at iland, jland :
+    # the index along x direction (icoast) of the nearest coast point is :
+    # - iland -1 if iland > i
+    # - iland if iland=i
+    # - iland + 1 if iland < i
+    # The same find is done for y axes. 
+
+    nearests_coast_point = np.zeros(nearests_land_points.shape)
     if i < (ndist - 1):
         if j< (ndist - 1):
-            nearests_coast_point[:,0]=nearests_sea_points[:,0] + i - (ndist - 1) # Go back to real indexes
-            nearests_coast_point[:,1]=nearests_sea_points[:,1] + j - (ndist - 1) # Go back to real indexes
+            nearests_coast_point[:,0]=nearests_land_points[:,0] + i - (ndist - 1) # Go back to real indexes
+            nearests_coast_point[:,1]=nearests_land_points[:,1] + j - (ndist - 1) # Go back to real indexes
             nearests_coast_point[:,0]=np.where(nearests_coast_point[:,0]>i,nearests_coast_point[:,0]-1,nearests_coast_point[:,0])
             nearests_coast_point[:,1]=np.where(nearests_coast_point[:,1]>j,nearests_coast_point[:,1]-1,nearests_coast_point[:,1])             
         else:       
-            nearests_coast_point[:,0]=nearests_sea_points[:,0] + i - (ndist - 1) # Go back to real indexes
-            nearests_coast_point[:,1]=nearests_sea_points[:,1] + j - ndist # Go back to real indexes
+            nearests_coast_point[:,0]=nearests_land_points[:,0] + i - (ndist - 1) # Go back to real indexes
+            nearests_coast_point[:,1]=nearests_land_points[:,1] + j - ndist # Go back to real indexes
             nearests_coast_point[:,0]=np.where(nearests_coast_point[:,0]<i,nearests_coast_point[:,0]+1,nearests_coast_point[:,0])
             nearests_coast_point[:,0]=np.where(nearests_coast_point[:,0]>i,nearests_coast_point[:,0]-1,nearests_coast_point[:,0])
             nearests_coast_point[:,1]=np.where(nearests_coast_point[:,1]<j,nearests_coast_point[:,1]+1,nearests_coast_point[:,1])
             nearests_coast_point[:,1]=np.where(nearests_coast_point[:,1]>j,nearests_coast_point[:,1]-1,nearests_coast_point[:,1])
     else:   
-        nearests_coast_point[:,0]=nearests_sea_points[:,0] + i - ndist # Go back to real indexes
-        nearests_coast_point[:,1]=nearests_sea_points[:,1] + j - ndist # Go back to real indexes
+        nearests_coast_point[:,0]=nearests_land_points[:,0] + i - ndist # Go back to real indexes
+        nearests_coast_point[:,1]=nearests_land_points[:,1] + j - ndist # Go back to real indexes
         nearests_coast_point[:,0]=np.where(nearests_coast_point[:,0]<i,nearests_coast_point[:,0]+1,nearests_coast_point[:,0])
         nearests_coast_point[:,0]=np.where(nearests_coast_point[:,0]>i,nearests_coast_point[:,0]-1,nearests_coast_point[:,0])
         nearests_coast_point[:,1]=np.where(nearests_coast_point[:,1]<j,nearests_coast_point[:,1]+1,nearests_coast_point[:,1])
@@ -276,63 +233,41 @@ def get_nearest_coast_point(i,j,ndist,nearests_sea_points):
 
 
 ######################################################################################################################
-def find_nearest_coast_point(i,j,mask,ndist,rnf_data):
+def find_nearest_coast_point(i,j,mask,ndist):
     # This function does basically the same operations as find_nearest_sea_point, except that:
     #    - the mask is inverted - so that the function looks for the closest land point
     #    - it does not returns directly the closest land point, but the nearest point in the sea by calling the function get_nearest_coast_point
+    # The closest land point(s) found will be preferentially: 
+    # - CASE 1: the land point(s) in ndist perimeter along i and j direction
+    # - CASE 2: is CASE 1 does not exists, the land point(s) in ndist perimeter along the diagonals 
+ 
     mask_inv=np.where(mask==1,0,1) # invert mask
-    i_ind_new=[]
-    j_ind_new=[]
     idim ,jdim = int(len(mask[:,0])), int(len(mask[0,:]))
 
     if (i > (ndist-1)):
         if (j > (ndist-1)):
-            arr_mr = rnf_data[i-ndist:i+ndist+1,j-ndist:j+ndist+1] + mask_inv[i-ndist:i+ndist+1,j-ndist:j+ndist+1]
+            arr_m = mask_inv[i-ndist:i+ndist+1,j-ndist:j+ndist+1]
         else:
-            arr_mr = rnf_data[i-ndist:i+ndist+1,j:j+ndist+1] + mask_inv[i-ndist:i+ndist+1,j:j+ndist+1]
+            arr_m = mask_inv[i-ndist:i+ndist+1,j:j+ndist+1]
     else:
         if (j > (ndist-1)):
-            arr_mr = rnf_data[i:i+ndist+1,j-ndist:j+ndist+1] + mask_inv[i:i+ndist+1,j-ndist:j+ndist+1]
+            arr_m = mask_inv[i:i+ndist+1,j-ndist:j+ndist+1]
         else:
-            arr_mr = rnf_data[i:i+ndist+1,j:j+ndist+1] + mask_inv[i:i+ndist+1,j:j+ndist+1]
-
-    arr_mr_ij=np.ones(arr_mr.shape)
-    if 0 in arr_mr:
-        arr_mr_ij[ndist,:]=arr_mr[ndist,:]
-        arr_mr_ij[:,ndist]=arr_mr[:,ndist]
-    if 0 in arr_mr_ij : # CASE 1
+            arr_m = mask_inv[i:i+ndist+1,j:j+ndist+1]  
+    
+    arr_m_ij=np.ones(arr_m.shape)
+    arr_m_ij[ndist,:]=arr_m[ndist,:]
+    arr_m_ij[:,ndist]=arr_m[:,ndist]
+    if 0 in arr_m_ij: # CASE 1
         # check along i and j axis only
-        nearests_sea_points=np.argwhere(arr_mr_ij[:,:]==0)
-        available_points = get_nearest_coast_point(i,j,ndist,nearests_sea_points)
-    else: 
-        if (i > (ndist-1)):
-            if (j > (ndist-1)):
-                arr_m = mask_inv[i-ndist:i+ndist+1,j-ndist:j+ndist+1]
-            else:
-                arr_m = mask_inv[i-ndist:i+ndist+1,j:j+ndist+1]
-        else:
-            if (j > (ndist-1)):
-                arr_m = mask_inv[i:i+ndist+1,j-ndist:j+ndist+1]
-            else:
-                arr_m = mask_inv[i:i+ndist+1,j:j+ndist+1]  
-        if 0 in arr_m:
-            arr_m_ij=np.ones(arr_m.shape)
-            arr_m_ij[ndist,:]=arr_m[ndist,:]
-            arr_m_ij[:,ndist]=arr_m[:,ndist]
-            if 0 in arr_m_ij: # CASE 2
-                # check along i and j axis only
-                nearests_sea_points=np.argwhere(arr_m_ij[:,:]==0)
-                available_points = get_nearest_coast_point(i,j,ndist,nearests_sea_points)
-
-            elif 0 in arr_mr: # CASE 3
-                nearests_sea_points=np.argwhere(arr_mr[:,:]==0)
-                available_points = get_nearest_coast_point(i,j,ndist,nearests_sea_points)
-            else: # CASE 4
-                nearests_sea_points=np.argwhere(arr_m[:,:]==0)
-                available_points = get_nearest_coast_point(i,j,ndist,nearests_sea_points)
-        else:
-            print("ERROR")
-            print(arr)
+        nearests_land_points=np.argwhere(arr_m_ij[:,:]==0)
+        available_points = get_nearest_coast_point(i,j,ndist,nearests_land_points)
+    elif 0 in arr_m: # CASE 2
+        nearests_land_points=np.argwhere(arr_m[:,:]==0)
+        available_points = get_nearest_coast_point(i,j,ndist,nearests_land_points)
+    else:
+        print("ERROR")
+        print(arr)
     return available_points
 
 
@@ -405,12 +340,12 @@ def move_runoffs(rnf_2Dt,rnf_point,mask,verb):
                         else: # At least one sea point in ndist perimeter
                             sea_point_not_found=1.
                             indexes_closests_sea_point=find_nearest_sea_point(rnf_point[0,n],rnf_point[1,n],\
-                                                                   mask_data,ndist,rnf_2D)
+                                                                   mask_data,ndist)
                         ndist=ndist+1
   
             else: # AT LEAST ONE SEA POINT in ndist=1 perimeter ------------
                 indexes_closests_sea_point=find_nearest_sea_point(rnf_point[0,n],rnf_point[1,n],mask_data,\
-                                                     ndist,rnf_2D)
+                                                     ndist)
     # NOW REPLACE RUNOFFS
             npoints=len(indexes_closests_sea_point[:,0])
             # Now replace data
@@ -453,7 +388,7 @@ def move_runoffs(rnf_2Dt,rnf_point,mask,verb):
                             else: # At least one sea point in ndist perimeter
                                 land_point_not_found=1.
                                 indexes_closests_land_point=find_nearest_coast_point(rnf_point[0,n],rnf_point[1,n],\
-                                                                       mask_data,ndist,rnf_2D)
+                                                                       mask_data,ndist)
                           
                             ndist=ndist+1
                     # NOW REPLACE RUNOFFS
@@ -486,7 +421,7 @@ def move_runoffs(rnf_2Dt,rnf_point,mask,verb):
 ######################################################################################################################
 def find_nearest_coast_point_ij(i,j,mask,rnf_data,nseuil):
     # This function is used in move_runoffs_ij 
-    # It finds the nearest coast point along ij
+    # It finds the nearest coast point along ij direction only
     out=[]
     n=1
     var=0
