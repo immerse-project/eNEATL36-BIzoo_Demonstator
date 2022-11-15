@@ -19,8 +19,9 @@ domain_cfg_file = '/data/vdi/tbrivoal/PRE_PROCESSING_IMMERSE/RUNOFFS_eNEATL36/do
 output_folder="/data/vdi/tbrivoal/PRE_PROCESSING_IMMERSE/RUNOFFS_eNEATL36/"
 outfile = output_folder + "runoff_eNEATL36_BDY_only_y" + str(year) + '.nc'  
 
-test_script=True # For debugging
-
+test_script=False # For debugging
+rivers_only=True
+clim_only=False
 ############# Read data ###############
 
 file_rnf_bdy_U=xr.open_dataset(rnf_bdy_folder + "runoff_U_y" + str(year) + ".nc") # file format : runoff_U_yYYYY.nc
@@ -102,22 +103,28 @@ if test_script==True:
     rnf_2D_daily_new[:,:,:] = 0. # initialisation
 else:
     rnf_2D_daily_new = rnf_2D_daily # initialisation
-    
-    
-for ind in range(len(U_rnf_bdy[0,:])):
-#     print(ind, nbju_gridT[ind].values,nbiu_gridT[ind].values)
-    e1te2t=e1t[nbju_gridT[ind],nbiu_gridT[ind]] * e2t[nbju_gridT[ind],nbiu_gridT[ind]]
-    rnf_2D_daily_new[:,nbju_gridT[ind],nbiu_gridT[ind]] = \
-    rnf_2D_daily_new[:,nbju_gridT[ind],nbiu_gridT[ind]]   \
-    + ((U_rnf_bdy[:,ind].values * Rho ) / e1te2t.values)
-    
-    
-for ind in range(len(V_rnf_bdy[0,:])):
-    e1te2t=e1t[nbjv_gridT[ind],nbiv_gridT[ind]] * e2t[nbjv_gridT[ind],nbiv_gridT[ind]]
-    rnf_2D_daily_new[:,nbjv_gridT[ind],nbiv_gridT[ind]] = \
-    rnf_2D_daily_new[:,nbjv_gridT[ind],nbiv_gridT[ind]] \
-    + ((V_rnf_bdy[:,ind].values * Rho ) / e1te2t.values)
 
+if rivers_only==True:
+    rnf_2D_daily_new = rnf_2D_daily # initialisation
+    rnf_2D_daily_new[:,:,:] = 0. # initialisation
+else:
+    rnf_2D_daily_new = rnf_2D_daily # initialisation
+    
+if clim_only==False:    
+    for ind in range(len(U_rnf_bdy[0,:])):
+    #     print(ind, nbju_gridT[ind].values,nbiu_gridT[ind].values)
+        e1te2t=e1t[nbju_gridT[ind],nbiu_gridT[ind]] * e2t[nbju_gridT[ind],nbiu_gridT[ind]]
+        rnf_2D_daily_new[:,nbju_gridT[ind],nbiu_gridT[ind]] = \
+        rnf_2D_daily_new[:,nbju_gridT[ind],nbiu_gridT[ind]]   \
+        + ((U_rnf_bdy[:,ind].values * Rho ) / e1te2t.values)
+        
+        
+    for ind in range(len(V_rnf_bdy[0,:])):
+        e1te2t=e1t[nbjv_gridT[ind],nbiv_gridT[ind]] * e2t[nbjv_gridT[ind],nbiv_gridT[ind]]
+        rnf_2D_daily_new[:,nbjv_gridT[ind],nbiv_gridT[ind]] = \
+        rnf_2D_daily_new[:,nbjv_gridT[ind],nbiv_gridT[ind]] \
+        + ((V_rnf_bdy[:,ind].values * Rho ) / e1te2t.values)
+    
 #
 if test_script==True:
     TEST = rnf_2D_daily_new.where(mask.values==0,0.) # mask sea data for testing
