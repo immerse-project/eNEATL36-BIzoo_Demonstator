@@ -8,7 +8,7 @@ from shutil import copyfile
 
 # Namelist
 
-year=2017 # year of runoff file
+year=2019 # year of runoff file
 
 # PATHS (Careful !!! Full path needed (e.g: /DATA/ROBERT/ instead of DATA/ROBERT))
 rnf_bdy_folder='/data/vdi/tbrivoal/PRE_PROCESSING_IMMERSE/RUNOFFS_eNEATL36/rnf_forcing/'
