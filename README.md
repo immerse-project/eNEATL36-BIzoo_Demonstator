@@ -4,7 +4,7 @@ This page describe the way to build a global 1/36° regional configuration other
 It regroups:
 - The eNEATL36 + BIZoo namelists and sources
 - Some useful tools to create an AGRIF configuration from scratch, such as:
-    - A tool to make the NEMO4.X coordinate file (domain_cfg.nc) compatible with the ifremer BMG tool (https://mars3d.ifremer.fr/Les-outils/BathyMeshGridTOOLS)in order to correct the bahtymetry manually (https://github.com/immerse-project/eNEATL36-BIzoo_Demonstator/tree/main/SCRIPTS/TOOLS/BATHY)
+    - A tool to make the NEMO4.X coordinate file (domain_cfg.nc) compatible with the ifremer BMG tool (https://mars3d.ifremer.fr/Les-outils/BathyMeshGridTOOLS) in order to correct the bahtymetry manually (https://github.com/immerse-project/eNEATL36-BIzoo_Demonstator/tree/main/SCRIPTS/TOOLS/BATHY)
     - A tool to move the runoffs along a new coastline, and to extrapolate them on a higher resolution grid (in a nesting context) (https://github.com/immerse-project/eNEATL36-BIzoo_Demonstator/tree/main/SCRIPTS/TOOLS/MOVE_RUNOFFS)
 - A wiki that details how to create an AGRIF configuration from scratch, and how to use the tools (https://github.com/immerse-project/eNEATL36-BIzoo_Demonstator/wiki) 
 
