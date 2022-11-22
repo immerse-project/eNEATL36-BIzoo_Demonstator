@@ -53,7 +53,7 @@ https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/tree/main/NAMELIST
 * An example of domain_cfg slurm script is available here : 
 https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/blob/main/SCRIPTS/DOMAINcfg/run_domain_cfg_eNEATL36_AGRIF_emodNET2018_finaldomain_corrected_with_FES2014.sub
 
-## Run a eNEATL46-AGRIF simulation : 
+## Run a eNEATL36-AGRIF simulation : 
 
 * Use the run scripts here : 
 https://github.com/immerse-project/eNEATL36-AGRIF_Demonstator/tree/main/SCRIPTS/RUN :   
