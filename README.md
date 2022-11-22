@@ -52,7 +52,7 @@ _Figure : Snapshot of the surface current vorticity other the 1/36° eNEATL36 ar
 
 ## Run a eNEATL36-AGRIF simulation : 
 
-* The wiki (sec 4.) describes how to run a simulation (https://github.com/immerse-project/eNEATL36-BIzoo_Demonstator/wiki/4.-Launch-a-simulation-with-AGRIF)
+* The wiki (sec 4.) describes how to run a simulation (https://github.com/immerse-project/eNEATL36-BIzoo_Demonstator/wiki)
 
 ## Additionnal tools : 
 
