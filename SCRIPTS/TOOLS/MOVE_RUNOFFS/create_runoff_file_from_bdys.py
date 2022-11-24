@@ -1,3 +1,10 @@
+#
+# This script has several purposes:
+# - Create daily data from a climatology of monthly averaged runoffs (if rivers_only=False)
+# - Read BDY runoffs, convert it to 2D runoffs. (if clim_only = False)
+# If clim_only = False and rivers_only=False, we merge BDY and CLIM data
+
+
 import shutil
 from shutil import copyfile
 
@@ -26,19 +33,20 @@ domain_cfg_file = (
 )
 
 output_folder = "/data/vdi/tbrivoal/PRE_PROCESSING_IMMERSE/RUNOFFS_eNEATL36/"
-outfile = output_folder + "runoff_eNEATL36_BDY_only_y" + str(year) + ".nc"
 
 test_script = False  # For debugging
 rivers_only = True
 clim_only = False
-############# Read data ###############
 
-file_rnf_bdy_U = xr.open_dataset(
-    rnf_bdy_folder + "runoff_U_y" + str(year) + ".nc"
-)  # file format : runoff_U_yYYYY.nc
-file_rnf_bdy_V = xr.open_dataset(rnf_bdy_folder + "runoff_V_y" + str(year) + ".nc")
-file_rnf_2D = xr.open_dataset(CLIM_rnf_2D_file)
-file_coords_bdy = xr.open_dataset(coords_bdy_file)
+if rivers_only:
+    outfile = output_folder + "runoff_eNEATL36_rivers_y" + str(year) + ".nc"
+elif clim_only:
+    outfile = output_folder + "runoff_eNEATL36_CLIM_y" + str(year) + ".nc"
+else:
+    outfile = output_folder + "runoff_eNEATL36_CLIM_and_rivers_y" + str(year) + ".nc"
+
+############# Read data ###############
+# Read coordinates
 domain_cfg = xr.open_dataset(
     domain_cfg_file,
     drop_variables={
@@ -47,28 +55,31 @@ domain_cfg = xr.open_dataset(
     },
 )
 
-# Read river mouth coordinates
-# ghosts cells are taken into account so we have to do - 2 (- 1 for ghost an -1 for python)
-
-nbiu_gridT = file_rnf_bdy_U.nbidta.squeeze()  # - 1 # - 1 to convert to gridT
-nbju_gridT = file_rnf_bdy_U.nbjdta.squeeze() - 1  # - 2
-nbiv_gridT = file_rnf_bdy_V.nbidta.squeeze() - 1  # -2
-nbjv_gridT = file_rnf_bdy_V.nbjdta.squeeze()  # - 1 # - 1 to convert to gridT
-
-# Read BDY files of U & V runoffs
-
-U_rnf_bdy = abs(file_rnf_bdy_U.runoffu.squeeze())
-V_rnf_bdy = abs(file_rnf_bdy_V.runoffv.squeeze())
-
-# Read 2D runoff data
-rnf_2D = file_rnf_2D.orca_costal
-
-# Read coordinates
-
 mask = domain_cfg.top_level.squeeze()
 e1t = domain_cfg.e1t.squeeze()
 e2t = domain_cfg.e2t.squeeze()
 
+# Read river mouth coordinates and runoffs
+if clim_only == False:
+    file_rnf_bdy_U = xr.open_dataset(
+        rnf_bdy_folder + "runoff_U_y" + str(year) + ".nc"
+    )  # file format : runoff_U_yYYYY.nc
+
+    file_rnf_bdy_V = xr.open_dataset(rnf_bdy_folder + "runoff_V_y" + str(year) + ".nc")
+    file_coords_bdy = xr.open_dataset(coords_bdy_file)
+
+    # Convert to gridT and python indexation
+    nbiu_gridT = file_rnf_bdy_U.nbidta.squeeze()
+    nbju_gridT = file_rnf_bdy_U.nbjdta.squeeze() - 1
+    nbiv_gridT = file_rnf_bdy_V.nbidta.squeeze() - 1
+    nbjv_gridT = file_rnf_bdy_V.nbjdta.squeeze()
+
+    U_rnf_bdy = abs(file_rnf_bdy_U.runoffu.squeeze())
+    V_rnf_bdy = abs(file_rnf_bdy_V.runoffv.squeeze())
+
+# Read 2D runoff data
+file_rnf_2D = xr.open_dataset(CLIM_rnf_2D_file)
+rnf_2D = file_rnf_2D.orca_costal
 
 ################################## Convert montly clim to daily clim ###################################
 
