@@ -31,25 +31,6 @@ def check_mask_nearby_ij(i, j, mask, ndist):
 
 
 ######################################################################################################################
-def get_npoints_ij(i, j, mask, ndist, rnf_data):
-    # return the number of sea points at ndist distance
-    arr = np.array(
-        [
-            rnf_data[i - ndist, j] + mask[i - ndist, j],
-            rnf_data[i + ndist, j] + mask[i + ndist, j],
-            rnf_data[i, j - ndist] + mask[i, j - ndist],
-            rnf_data[i, j + ndist] + mask[i, j + ndist],
-        ]
-    )
-    ind = np.array(np.argwhere(arr == 0))
-    if len(ind > 0):
-        return len(ind)
-    else:
-        ind = np.array(np.argwhere(arr < 1))
-        return len(ind)
-
-
-######################################################################################################################
 def check_if_surrounded_by_land(i, j, mask, ndist):
     # Function to check if the point at i,j is surrounded by land
     # It counts how many land points (npts) are around in a ndist perimeter
